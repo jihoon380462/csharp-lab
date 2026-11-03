@@ -69,8 +69,16 @@ public static class Engine
         """;
 
     static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.CSharp13);
-    static readonly SyntaxTree GlobalUsingsTree = CSharpSyntaxTree.ParseText(GlobalUsingsSource, ParseOptions, "GlobalUsings.cs", Encoding.UTF8);
-    static readonly SyntaxTree GuardTree = CSharpSyntaxTree.ParseText(GuardSource, ParseOptions, "Guard.cs", Encoding.UTF8);
+    static readonly SyntaxTree GlobalUsingsTree = CSharpSyntaxTree.ParseText(WithChecksum(GlobalUsingsSource, "GlobalUsings.cs"), ParseOptions, "GlobalUsings.cs", Encoding.UTF8);
+    static readonly SyntaxTree GuardTree = CSharpSyntaxTree.ParseText(WithChecksum(GuardSource, "Guard.cs"), ParseOptions, "Guard.cs", Encoding.UTF8);
+
+    /// <summary>
+    /// 파일 끝에 #pragma checksum을 붙인다. 없으면 Roslyn이 디버그 정보용 체크섬을 Task.Run으로 계산하고
+    /// .Result로 기다리는데, 브라우저(단일 스레드)에서는 이 대기가 가끔 실패한다(PlatformNotSupported).
+    /// 끝에 붙이므로 학습자 코드의 줄 번호는 바뀌지 않는다.
+    /// </summary>
+    static string WithChecksum(string source, string path) =>
+        source + "\n#pragma checksum \"" + path + "\" \"{ff1816ec-aa5e-4d10-87f7-6f4963833460}\" \"0000000000000000000000000000000000000000\"\n";
     static readonly CultureInfo Korean = MakeKorean();
     static IReadOnlyList<MetadataReference>? _references;
 
@@ -131,7 +139,8 @@ public static class Engine
     {
         // ── 1) 원본 코드로 컴파일 검사 (줄 번호가 원본과 정확히 일치하도록) ──
         var sw = Stopwatch.StartNew();
-        var userTree = CSharpSyntaxTree.ParseText(code, ParseOptions, "Program.cs", Encoding.UTF8);
+        var userLines = code.Split('\n').Length;
+        var userTree = CSharpSyntaxTree.ParseText(WithChecksum(code, "Program.cs"), ParseOptions, "Program.cs", Encoding.UTF8);
         if (((Microsoft.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)userTree.GetRoot()).Members.Count == 0
             && !userTree.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
         {
@@ -148,6 +157,12 @@ public static class Engine
             .Take(30)
             .ToList();
         result.Diagnostics = diagnostics.Select(ToInfo).ToList();
+        foreach (var d in result.Diagnostics)
+        {
+            // 파일 끝 오류(예: } 누락)가 덧붙인 줄을 가리키지 않게
+            if (d.Line > userLines) d.Line = userLines;
+            if (d.EndLine > userLines) d.EndLine = userLines;
+        }
 
         if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {

@@ -1,36 +1,313 @@
 [
-  { "id": "hello", "code": "Console.WriteLine(\"안녕하세요, C#!\");", "expect": { "status": "ok", "stdoutEquals": "안녕하세요, C#!\n" } },
-  { "id": "interp-math", "code": "double r = 2.5;\nConsole.WriteLine($\"{Math.PI * r * r:F2}\");\nConsole.WriteLine(7 / 2);\nConsole.WriteLine(7 % 3);\nConsole.WriteLine(1.5 + 2);", "expect": { "status": "ok", "stdoutEquals": "19.63\n3\n1\n3.5\n" } },
-  { "id": "loop-for", "code": "for (int i = 1; i <= 3; i++) Console.Write(i);\nint n = 0; while (n < 2) n++;\ndo { n++; } while (n < 5);\nforeach (var c in \"ab\") Console.Write(c);\nforeach (var (k, v) in new Dictionary<string,int>{[\"x\"]=1}) Console.Write(k + v);\nConsole.WriteLine(n);", "expect": { "status": "ok", "stdoutEquals": "123abx15\n" } },
-  { "id": "class-record-struct", "code": "var p = new Player(\"용사\", 10);\np.Hit(3);\nvar pt = new Point(1, 2);\nConsole.WriteLine(pt with { X = 5 });\nConsole.WriteLine(new V2(3, 4).Len);\nclass Player { public string Name; public int Hp; public Player(string n, int h) { Name = n; Hp = h; } public void Hit(int d) { Hp -= d; Console.WriteLine($\"{Name} {Hp}\"); } }\nrecord Point(int X, int Y);\nstruct V2 { public double X, Y; public V2(double x, double y) { X = x; Y = y; } public double Len => Math.Sqrt(X * X + Y * Y); }", "expect": { "status": "ok", "stdoutEquals": "용사 7\nPoint { X = 5, Y = 2 }\n5\n" } },
-  { "id": "inherit-interface", "code": "Animal[] zoo = { new Dog(), new Cat() };\nforeach (var a in zoo) Console.WriteLine(a.Speak());\nIShape s = new Sq(3); Console.WriteLine(s.Area());\nabstract class Animal { public abstract string Speak(); }\nclass Dog : Animal { public override string Speak() => \"멍\"; }\nclass Cat : Animal { public override string Speak() => \"야옹\"; }\ninterface IShape { double Area(); }\nclass Sq : IShape { double s; public Sq(double s) { this.s = s; } public double Area() => s * s; }", "expect": { "status": "ok", "stdoutEquals": "멍\n야옹\n9\n" } },
-  { "id": "linq-collections", "code": "var xs = new List<int> { 5, 3, 8, 1 };\nConsole.WriteLine(string.Join(\",\", xs.Where(x => x > 2).OrderBy(x => x)));\nConsole.WriteLine(xs.Sum() + \" \" + xs.Max() + \" \" + xs.Average());\nvar d = new Dictionary<string, int> { [\"a\"] = 1 }; d[\"b\"] = 2;\nConsole.WriteLine(d.Count + \" \" + d.ContainsKey(\"b\"));\nvar q = new Queue<int>(); q.Enqueue(1); q.Enqueue(2); Console.WriteLine(q.Dequeue());\nvar st = new Stack<string>(); st.Push(\"x\"); Console.WriteLine(st.Peek());\nvar hs = new HashSet<int> { 1, 1, 2 }; Console.WriteLine(hs.Count);\nvar g = xs.GroupBy(x => x % 2 == 0 ? \"짝\" : \"홀\").Select(gr => gr.Key + gr.Count());\nConsole.WriteLine(string.Join(\" \", g.OrderBy(s => s)));", "expect": { "status": "ok", "stdoutEquals": "3,5,8\n17 8 4.25\n2 True\n1\nx\n2\n짝1 홀3\n" } },
-  { "id": "string-ops", "code": "string s = \"Hello, 세계\";\nConsole.WriteLine(s.Length);\nConsole.WriteLine(s.ToUpper());\nConsole.WriteLine(s.Substring(7));\nConsole.WriteLine(s.Replace(\"세계\", \"C#\"));\nConsole.WriteLine(string.Join(\"|\", \"a,b,c\".Split(',')));\nvar sb = new StringBuilder(); sb.Append(\"x\").Append(3); Console.WriteLine(sb);\nConsole.WriteLine(int.Parse(\"42\") + 1);\nConsole.WriteLine(int.TryParse(\"abc\", out var v) + \" \" + v);", "expect": { "status": "ok", "stdoutEquals": "9\nHELLO, 세계\n세계\nHello, C#\na|b|c\nx3\n43\nFalse 0\n" } },
-  { "id": "stdin", "code": "string name = Console.ReadLine();\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine($\"{name} {age + 1}\");\nConsole.WriteLine(Console.ReadLine() == null);", "stdin": "홍길동\n20", "expect": { "status": "ok", "stdoutEquals": "홍길동 21\nTrue\n" } },
-  { "id": "classic-main", "code": "using System;\n\nnamespace Demo\n{\n    class Program\n    {\n        static void Main(string[] args)\n        {\n            Console.WriteLine(\"클래식 Main \" + args.Length);\n        }\n    }\n}", "expect": { "status": "ok", "stdoutEquals": "클래식 Main 0\n" } },
-  { "id": "async", "code": "Console.WriteLine(\"a\");\nawait Task.Delay(100);\nConsole.WriteLine(await F(2));\nstatic async Task<int> F(int x) { await Task.Delay(50); return x * 10; }\nstatic async Task G() => await Task.Delay(1);", "expect": { "status": "ok", "stdoutEquals": "a\n20\n" } },
-  { "id": "generics-lambda-tuple", "code": "T Max<T>(T a, T b) where T : IComparable<T> => a.CompareTo(b) > 0 ? a : b;\nConsole.WriteLine(Max(3, 9));\nFunc<int, int> sq = x => x * x;\nConsole.WriteLine(sq(7));\nvar (a, b) = (1, \"둘\");\nConsole.WriteLine($\"{a}{b}\");\nint[] arr = { 3, 1, 2 }; Array.Sort(arr); Console.WriteLine(string.Join(\"\", arr));\nint[,] grid = new int[2, 3]; grid[1, 2] = 7; Console.WriteLine(grid[1, 2] + grid.Length);\nvar sw = 2 switch { 1 => \"one\", 2 => \"two\", _ => \"?\" }; Console.WriteLine(sw);\nobject o = 5; if (o is int k && k > 3) Console.WriteLine(\"패턴\");", "expect": { "status": "ok", "stdoutEquals": "9\n49\n1둘\n123\n13\ntwo\n패턴\n" } },
-  { "id": "enum-static-props", "code": "Console.WriteLine(Color.Blue);\nConsole.WriteLine((int)Color.Blue);\nCounter.Add(); Counter.Add(); Console.WriteLine(Counter.Value);\nenum Color { Red, Green, Blue }\nstatic class Counter { public static int Value { get; private set; } public static void Add() => Value++; }", "expect": { "status": "ok", "stdoutEquals": "Blue\n2\n2\n" } },
-  { "id": "exception-handling", "code": "try { int z = 0; Console.WriteLine(1 / z); }\ncatch (DivideByZeroException) { Console.WriteLine(\"잡음\"); }\nfinally { Console.WriteLine(\"끝\"); }\ntry { throw new InvalidOperationException(\"내 예외\"); } catch (Exception e) { Console.WriteLine(e.Message); }", "expect": { "status": "ok", "stdoutEquals": "잡음\n끝\n내 예외\n" } },
-  { "id": "recursion-ok", "code": "int Fib(int n) => n < 2 ? n : Fib(n - 1) + Fib(n - 2);\nConsole.WriteLine(Fib(20));\nlong Sum(int n) { if (n == 0) return 0; return n + Sum(n - 1); }\nConsole.WriteLine(Sum(1500));", "expect": { "status": "ok", "stdoutEquals": "6765\n1125750\n" } },
-  { "id": "random-datetime", "code": "var r = new Random(1); int x = r.Next(1, 7); Console.WriteLine(x >= 1 && x <= 6);\nConsole.WriteLine(DateTime.Now.Year >= 2024);\nConsole.WriteLine(Guid.NewGuid().ToString().Length);", "expect": { "status": "ok", "stdoutEquals": "True\nTrue\n36\n" } },
-  { "id": "compile-error", "code": "int gold = 100\nstring msg = \"골드: \" + gold;\nConsole.WriteLine(mesage);", "expect": { "status": "compile-error", "diagLines": [1, 3] } },
-  { "id": "compile-error-type", "code": "int x = \"문자\";\nConsole.WriteLine(x);", "expect": { "status": "compile-error", "diagLines": [1] } },
-  { "id": "runtime-index", "code": "int[] a = { 1, 2, 3 };\nConsole.WriteLine(a[2]);\nConsole.WriteLine(a[3]);", "expect": { "status": "runtime-error", "stdoutEquals": "3\n", "errorType": "IndexOutOfRangeException", "errorLine": 3 } },
-  { "id": "runtime-divzero-method", "code": "Console.WriteLine(\"시작\");\nConsole.WriteLine(Div(10, 0));\n\nint Div(int a, int b)\n{\n    return a / b;\n}", "expect": { "status": "runtime-error", "errorType": "DivideByZeroException", "errorLine": 6 } },
-  { "id": "runtime-null", "code": "string s = null;\nConsole.WriteLine(s.Length);", "expect": { "status": "runtime-error", "errorType": "NullReferenceException", "errorLine": 2 } },
-  { "id": "runtime-format", "code": "int n = int.Parse(\"abc\");", "expect": { "status": "runtime-error", "errorType": "FormatException", "errorLine": 1 } },
-  { "id": "infinite-while", "code": "int c = 0;\nwhile (true) { c++; }", "expect": { "status": "stopped", "errorType": "Timeout" } },
-  { "id": "infinite-for-catch", "code": "for (;;) { try { } catch (Exception) { } }", "expect": { "status": "stopped", "errorType": "Timeout" } },
-  { "id": "infinite-swallow", "code": "while (true) { try { for(;;){} } catch { } }", "expect": { "status": "stopped", "errorType": "Timeout" } },
-  { "id": "infinite-recursion", "code": "Console.WriteLine(F(10));\nint F(int n) => F(n - 1);", "expect": { "status": "stopped", "errorType": "TooDeep" } },
-  { "id": "infinite-recursion-method", "code": "new A().Go();\nclass A { public void Go() { Go(); } }", "expect": { "status": "stopped", "errorType": "TooDeep" } },
-  { "id": "output-flood", "code": "while (true) Console.WriteLine(\"도배도배도배도배\");", "expect": { "status": "stopped", "errorType": "OutputLimit" } },
-  { "id": "after-stop-still-works", "code": "Console.WriteLine(\"정상\");", "expect": { "status": "ok", "stdoutEquals": "정상\n" } },
-  { "id": "expr-body-throw-void", "code": "void Boom() => throw new Exception(\"펑\");\nvoid Say(string s) => Console.WriteLine(s);\nSay(\"말\");\ntry { Boom(); } catch (Exception e) { Say(e.Message); }", "expect": { "status": "ok", "stdoutEquals": "말\n펑\n" } },
-  { "id": "iterator-yield", "code": "foreach (var x in Evens(3)) Console.Write(x);\nConsole.WriteLine();\nIEnumerable<int> Evens(int n) { for (int i = 0; i < n; i++) yield return i * 2; }", "expect": { "status": "ok", "stdoutEquals": "024\n" } },
-  { "id": "empty", "code": "", "expect": { "status": "ok", "stdoutEquals": "" } },
-  { "id": "only-comment", "code": "// 주석만", "expect": { "status": "ok", "stdoutEquals": "" } },
-  { "id": "warning-only", "code": "int unused;\nConsole.WriteLine(\"경고만\");", "expect": { "status": "ok", "stdoutEquals": "경고만\n", "hasWarning": true } },
-  { "id": "multiline-expr-body-lines", "code": "int Calc(int a)\n    => a\n       + 1;\n\nConsole.WriteLine(Calc(1));\nint[] z = new int[1];\nConsole.WriteLine(z[5]);", "expect": { "status": "runtime-error", "stdoutEquals": "2\n", "errorType": "IndexOutOfRangeException", "errorLine": 7 } }
+ {
+  "id": "hello",
+  "code": "Console.WriteLine(\"안녕하세요, C#!\");",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "안녕하세요, C#!\n"
+  }
+ },
+ {
+  "id": "interp-math",
+  "code": "double r = 2.5;\nConsole.WriteLine($\"{Math.PI * r * r:F2}\");\nConsole.WriteLine(7 / 2);\nConsole.WriteLine(7 % 3);\nConsole.WriteLine(1.5 + 2);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "19.63\n3\n1\n3.5\n"
+  }
+ },
+ {
+  "id": "loop-for",
+  "code": "for (int i = 1; i <= 3; i++) Console.Write(i);\nint n = 0; while (n < 2) n++;\ndo { n++; } while (n < 5);\nforeach (var c in \"ab\") Console.Write(c);\nforeach (var (k, v) in new Dictionary<string,int>{[\"x\"]=1}) Console.Write(k + v);\nConsole.WriteLine(n);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "123abx15\n"
+  }
+ },
+ {
+  "id": "class-record-struct",
+  "code": "var p = new Player(\"용사\", 10);\np.Hit(3);\nvar pt = new Point(1, 2);\nConsole.WriteLine(pt with { X = 5 });\nConsole.WriteLine(new V2(3, 4).Len);\nclass Player { public string Name; public int Hp; public Player(string n, int h) { Name = n; Hp = h; } public void Hit(int d) { Hp -= d; Console.WriteLine($\"{Name} {Hp}\"); } }\nrecord Point(int X, int Y);\nstruct V2 { public double X, Y; public V2(double x, double y) { X = x; Y = y; } public double Len => Math.Sqrt(X * X + Y * Y); }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "용사 7\nPoint { X = 5, Y = 2 }\n5\n"
+  }
+ },
+ {
+  "id": "inherit-interface",
+  "code": "Animal[] zoo = { new Dog(), new Cat() };\nforeach (var a in zoo) Console.WriteLine(a.Speak());\nIShape s = new Sq(3); Console.WriteLine(s.Area());\nabstract class Animal { public abstract string Speak(); }\nclass Dog : Animal { public override string Speak() => \"멍\"; }\nclass Cat : Animal { public override string Speak() => \"야옹\"; }\ninterface IShape { double Area(); }\nclass Sq : IShape { double s; public Sq(double s) { this.s = s; } public double Area() => s * s; }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "멍\n야옹\n9\n"
+  }
+ },
+ {
+  "id": "linq-collections",
+  "code": "var xs = new List<int> { 5, 3, 8, 1 };\nConsole.WriteLine(string.Join(\",\", xs.Where(x => x > 2).OrderBy(x => x)));\nConsole.WriteLine(xs.Sum() + \" \" + xs.Max() + \" \" + xs.Average());\nvar d = new Dictionary<string, int> { [\"a\"] = 1 }; d[\"b\"] = 2;\nConsole.WriteLine(d.Count + \" \" + d.ContainsKey(\"b\"));\nvar q = new Queue<int>(); q.Enqueue(1); q.Enqueue(2); Console.WriteLine(q.Dequeue());\nvar st = new Stack<string>(); st.Push(\"x\"); Console.WriteLine(st.Peek());\nvar hs = new HashSet<int> { 1, 1, 2 }; Console.WriteLine(hs.Count);\nvar g = xs.GroupBy(x => x % 2 == 0 ? \"짝\" : \"홀\").Select(gr => gr.Key + gr.Count());\nConsole.WriteLine(string.Join(\" \", g.OrderBy(s => s)));",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "3,5,8\n17 8 4.25\n2 True\n1\nx\n2\n짝1 홀3\n"
+  }
+ },
+ {
+  "id": "string-ops",
+  "code": "string s = \"Hello, 세계\";\nConsole.WriteLine(s.Length);\nConsole.WriteLine(s.ToUpper());\nConsole.WriteLine(s.Substring(7));\nConsole.WriteLine(s.Replace(\"세계\", \"C#\"));\nConsole.WriteLine(string.Join(\"|\", \"a,b,c\".Split(',')));\nvar sb = new StringBuilder(); sb.Append(\"x\").Append(3); Console.WriteLine(sb);\nConsole.WriteLine(int.Parse(\"42\") + 1);\nConsole.WriteLine(int.TryParse(\"abc\", out var v) + \" \" + v);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "9\nHELLO, 세계\n세계\nHello, C#\na|b|c\nx3\n43\nFalse 0\n"
+  }
+ },
+ {
+  "id": "stdin",
+  "code": "string name = Console.ReadLine();\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine($\"{name} {age + 1}\");\nConsole.WriteLine(Console.ReadLine() == null);",
+  "stdin": "홍길동\n20",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "홍길동 21\nTrue\n"
+  }
+ },
+ {
+  "id": "classic-main",
+  "code": "using System;\n\nnamespace Demo\n{\n    class Program\n    {\n        static void Main(string[] args)\n        {\n            Console.WriteLine(\"클래식 Main \" + args.Length);\n        }\n    }\n}",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "클래식 Main 0\n"
+  }
+ },
+ {
+  "id": "async",
+  "code": "Console.WriteLine(\"a\");\nawait Task.Delay(100);\nConsole.WriteLine(await F(2));\nstatic async Task<int> F(int x) { await Task.Delay(50); return x * 10; }\nstatic async Task G() => await Task.Delay(1);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "a\n20\n"
+  }
+ },
+ {
+  "id": "generics-lambda-tuple",
+  "code": "T Max<T>(T a, T b) where T : IComparable<T> => a.CompareTo(b) > 0 ? a : b;\nConsole.WriteLine(Max(3, 9));\nFunc<int, int> sq = x => x * x;\nConsole.WriteLine(sq(7));\nvar (a, b) = (1, \"둘\");\nConsole.WriteLine($\"{a}{b}\");\nint[] arr = { 3, 1, 2 }; Array.Sort(arr); Console.WriteLine(string.Join(\"\", arr));\nint[,] grid = new int[2, 3]; grid[1, 2] = 7; Console.WriteLine(grid[1, 2] + grid.Length);\nvar sw = 2 switch { 1 => \"one\", 2 => \"two\", _ => \"?\" }; Console.WriteLine(sw);\nobject o = 5; if (o is int k && k > 3) Console.WriteLine(\"패턴\");",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "9\n49\n1둘\n123\n13\ntwo\n패턴\n"
+  }
+ },
+ {
+  "id": "enum-static-props",
+  "code": "Console.WriteLine(Color.Blue);\nConsole.WriteLine((int)Color.Blue);\nCounter.Add(); Counter.Add(); Console.WriteLine(Counter.Value);\nenum Color { Red, Green, Blue }\nstatic class Counter { public static int Value { get; private set; } public static void Add() => Value++; }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "Blue\n2\n2\n"
+  }
+ },
+ {
+  "id": "exception-handling",
+  "code": "try { int z = 0; Console.WriteLine(1 / z); }\ncatch (DivideByZeroException) { Console.WriteLine(\"잡음\"); }\nfinally { Console.WriteLine(\"끝\"); }\ntry { throw new InvalidOperationException(\"내 예외\"); } catch (Exception e) { Console.WriteLine(e.Message); }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "잡음\n끝\n내 예외\n"
+  }
+ },
+ {
+  "id": "recursion-ok",
+  "code": "int Fib(int n) => n < 2 ? n : Fib(n - 1) + Fib(n - 2);\nConsole.WriteLine(Fib(20));\nlong Sum(int n) { if (n == 0) return 0; return n + Sum(n - 1); }\nConsole.WriteLine(Sum(1500));",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "6765\n1125750\n"
+  }
+ },
+ {
+  "id": "random-datetime",
+  "code": "var r = new Random(1); int x = r.Next(1, 7); Console.WriteLine(x >= 1 && x <= 6);\nConsole.WriteLine(DateTime.Now.Year >= 2024);\nConsole.WriteLine(Guid.NewGuid().ToString().Length);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "True\nTrue\n36\n"
+  }
+ },
+ {
+  "id": "compile-error",
+  "code": "int gold = 100\nstring msg = \"골드: \" + gold;\nConsole.WriteLine(mesage);",
+  "expect": {
+   "status": "compile-error",
+   "diagLines": [
+    1,
+    3
+   ]
+  }
+ },
+ {
+  "id": "bcl-coverage",
+  "code": "using System.Diagnostics;\nusing System.Text.RegularExpressions;\nusing System.Numerics;\nusing System.Collections.Concurrent;\nusing System.Collections.ObjectModel;\nvar errs = new List<string>();\nvoid T(Action a, string name) { try { a(); } catch (Exception e) { errs.Add(name + \":\" + e.GetType().Name); } }\nT(() => throw new ArgumentException(\"a\"), \"arg\");\nT(() => throw new ArgumentNullException(\"b\"), \"argnull\");\nT(() => throw new InvalidOperationException(), \"inv\");\nT(() => throw new NotImplementedException(), \"notimpl\");\nT(() => throw new NotSupportedException(), \"notsup\");\nT(() => { var d = new Dictionary<int,int>(); _ = d[1]; }, \"key\");\nT(() => { checked { int x = int.MaxValue; x++; } }, \"ovf\");\nT(() => { object o = \"s\"; _ = (int)o; }, \"cast\");\nT(() => throw new TimeoutException(), \"timeout\");\nT(() => throw new IOException(), \"io\");\nConsole.WriteLine(string.Join(\",\", errs));\nvar sw = Stopwatch.StartNew(); sw.Stop();\nConsole.WriteLine(Regex.IsMatch(\"abc123\", @\"\\d+\"));\nConsole.WriteLine(BigInteger.Pow(2, 100));\nvar cd = new ConcurrentDictionary<string,int>(); cd.TryAdd(\"x\", 1); Console.WriteLine(cd[\"x\"]);\nvar oc = new ObservableCollection<int> { 1, 2 }; Console.WriteLine(oc.Count);\nvar pq = new PriorityQueue<string,int>(); pq.Enqueue(\"b\", 2); pq.Enqueue(\"a\", 1); Console.WriteLine(pq.Dequeue());\nvar sd = new SortedDictionary<int,string> { [2] = \"둘\", [1] = \"하나\" }; Console.WriteLine(sd.First().Value);\nvar ll = new LinkedList<int>(); ll.AddLast(3); ll.AddFirst(1); Console.WriteLine(ll.First!.Value);\nSpan<int> sp = stackalloc int[3]; sp[0] = 7; Console.WriteLine(sp[0]);\nConsole.WriteLine(TimeSpan.FromMinutes(90).TotalHours);\nConsole.WriteLine(Convert.ToInt32(\"ff\", 16) + \" \" + Math.Round(2.567, 2) + \" \" + Math.Clamp(15, 0, 10));\nConsole.WriteLine(char.IsDigit('7') + \" \" + \"Abc\".Equals(\"abc\", StringComparison.OrdinalIgnoreCase));\nvar lazy = new Lazy<int>(() => 42); Console.WriteLine(lazy.Value);\nConsole.WriteLine(Enum.Parse<DayOfWeek>(\"Monday\"));\nint? n = null; Console.WriteLine(n ?? -1);\nusing (var ms = new MemoryStream()) { ms.WriteByte(1); Console.WriteLine(ms.Length); }\nConsole.WriteLine(Environment.NewLine.Length > 0);",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "arg:ArgumentException,argnull:ArgumentNullException,inv:InvalidOperationException,notimpl:NotImplementedException,notsup:NotSupportedException,key:KeyNotFoundException,ovf:OverflowException,cast:InvalidCastException,timeout:TimeoutException,io:IOException\nTrue\n1267650600228229401496703205376\n1\n2\na\n하나\n1\n7\n1.5\n255 2.57 10\nTrue True\n42\nMonday\n-1\n1\nTrue\n"
+  }
+ },
+ {
+  "id": "missing-brace",
+  "code": "if (true)\n{\n    Console.WriteLine(1);\n",
+  "expect": {
+   "status": "compile-error",
+   "diagLines": [
+    4
+   ]
+  }
+ },
+ {
+  "id": "unsupported-lib",
+  "code": "using System.Net.Http;\nvar c = new HttpClient();",
+  "expect": {
+   "status": "compile-error"
+  }
+ },
+ {
+  "id": "compile-error-type",
+  "code": "int x = \"문자\";\nConsole.WriteLine(x);",
+  "expect": {
+   "status": "compile-error",
+   "diagLines": [
+    1
+   ]
+  }
+ },
+ {
+  "id": "runtime-index",
+  "code": "int[] a = { 1, 2, 3 };\nConsole.WriteLine(a[2]);\nConsole.WriteLine(a[3]);",
+  "expect": {
+   "status": "runtime-error",
+   "stdoutEquals": "3\n",
+   "errorType": "IndexOutOfRangeException",
+   "errorLine": 3
+  }
+ },
+ {
+  "id": "runtime-divzero-method",
+  "code": "Console.WriteLine(\"시작\");\nConsole.WriteLine(Div(10, 0));\n\nint Div(int a, int b)\n{\n    return a / b;\n}",
+  "expect": {
+   "status": "runtime-error",
+   "errorType": "DivideByZeroException",
+   "errorLine": 6
+  }
+ },
+ {
+  "id": "runtime-null",
+  "code": "string s = null;\nConsole.WriteLine(s.Length);",
+  "expect": {
+   "status": "runtime-error",
+   "errorType": "NullReferenceException",
+   "errorLine": 2
+  }
+ },
+ {
+  "id": "runtime-format",
+  "code": "int n = int.Parse(\"abc\");",
+  "expect": {
+   "status": "runtime-error",
+   "errorType": "FormatException",
+   "errorLine": 1
+  }
+ },
+ {
+  "id": "infinite-while",
+  "code": "int c = 0;\nwhile (true) { c++; }",
+  "expect": {
+   "status": "stopped",
+   "errorType": "Timeout"
+  }
+ },
+ {
+  "id": "infinite-for-catch",
+  "code": "for (;;) { try { } catch (Exception) { } }",
+  "expect": {
+   "status": "stopped",
+   "errorType": "Timeout"
+  }
+ },
+ {
+  "id": "infinite-swallow",
+  "code": "while (true) { try { for(;;){} } catch { } }",
+  "expect": {
+   "status": "stopped",
+   "errorType": "Timeout"
+  }
+ },
+ {
+  "id": "infinite-recursion",
+  "code": "Console.WriteLine(F(10));\nint F(int n) => F(n - 1);",
+  "expect": {
+   "status": "stopped",
+   "errorType": "TooDeep"
+  }
+ },
+ {
+  "id": "infinite-recursion-method",
+  "code": "new A().Go();\nclass A { public void Go() { Go(); } }",
+  "expect": {
+   "status": "stopped",
+   "errorType": "TooDeep"
+  }
+ },
+ {
+  "id": "output-flood",
+  "code": "while (true) Console.WriteLine(\"도배도배도배도배\");",
+  "expect": {
+   "status": "stopped",
+   "errorType": "OutputLimit"
+  }
+ },
+ {
+  "id": "after-stop-still-works",
+  "code": "Console.WriteLine(\"정상\");",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "정상\n"
+  }
+ },
+ {
+  "id": "expr-body-throw-void",
+  "code": "void Boom() => throw new Exception(\"펑\");\nvoid Say(string s) => Console.WriteLine(s);\nSay(\"말\");\ntry { Boom(); } catch (Exception e) { Say(e.Message); }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "말\n펑\n"
+  }
+ },
+ {
+  "id": "iterator-yield",
+  "code": "foreach (var x in Evens(3)) Console.Write(x);\nConsole.WriteLine();\nIEnumerable<int> Evens(int n) { for (int i = 0; i < n; i++) yield return i * 2; }",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "024\n"
+  }
+ },
+ {
+  "id": "empty",
+  "code": "",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": ""
+  }
+ },
+ {
+  "id": "only-comment",
+  "code": "// 주석만",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": ""
+  }
+ },
+ {
+  "id": "warning-only",
+  "code": "int unused;\nConsole.WriteLine(\"경고만\");",
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "경고만\n",
+   "hasWarning": true
+  }
+ },
+ {
+  "id": "multiline-expr-body-lines",
+  "code": "int Calc(int a)\n    => a\n       + 1;\n\nConsole.WriteLine(Calc(1));\nint[] z = new int[1];\nConsole.WriteLine(z[5]);",
+  "expect": {
+   "status": "runtime-error",
+   "stdoutEquals": "2\n",
+   "errorType": "IndexOutOfRangeException",
+   "errorLine": 7
+  }
+ }
 ]

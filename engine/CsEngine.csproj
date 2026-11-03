@@ -29,6 +29,10 @@
   <ItemGroup>
     <!-- 학습자 코드 실행에 필요한 구현 (통째로 유지) -->
     <TrimmerRootAssembly Include="System.Private.CoreLib" />
+    <!-- 참조 어셈블리가 가리키는 이름(형식 전달 facade)도 남겨야 실행 시 형식을 찾는다 -->
+    <TrimmerRootAssembly Include="System.Runtime" />
+    <TrimmerRootAssembly Include="System.Runtime.Extensions" />
+    <TrimmerRootAssembly Include="System.Threading.Tasks" />
     <TrimmerRootAssembly Include="System.Collections" />
     <TrimmerRootAssembly Include="System.Collections.Concurrent" />
     <TrimmerRootAssembly Include="System.Console" />
