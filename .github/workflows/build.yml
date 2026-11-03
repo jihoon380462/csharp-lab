@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: 엔진 테스트 (데스크톱 .NET)
         id: tests
@@ -36,9 +36,10 @@ jobs:
         run: |
           site=out/wwwroot
           touch "$site/.nojekyll"
-          # 로딩 진행률 계산용: 실제로 받는 파일(gz) 용량 합계 (다른 언어용 ICU 조각 제외)
-          gz=$(find "$site/_framework" -name '*.gz' ! -name '*.js.gz' ! -name '*.json.gz' ! -name 'icudt_EFIGS*' ! -name 'icudt_no_CJK*' -printf '%s\n' | awk '{s+=$1} END {print s+0}')
-          echo "{\"gzBytes\": $gz}" > "$site/lab-size.json"
+          # 로딩 진행률 계산용: 실제로 받는 파일의 압축(gz/br) 용량 합계 (다른 언어용 ICU 조각, js 제외)
+          sum() { find "$site/_framework" -name "*.$1" ! -name "*.js.$1" ! -name "*.json.$1" ! -name 'icudt_EFIGS*' ! -name 'icudt_no_CJK*' ! -name 'icudt.*' ! -name 'icudt_hybrid*' -printf '%s\n' | awk '{s+=$1} END {print s+0}'; }
+          echo "{\"gzBytes\": $(sum gz), \"brBytes\": $(sum br)}" > "$site/lab-size.json"
+          cat "$site/lab-size.json"
           {
             echo "commit: $GITHUB_SHA"
             echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -50,8 +51,14 @@ jobs:
             echo "## gzip 전송 크기 합계 (*.gz)"
             find "$site/_framework" -name '*.gz' -printf '%s\n' | awk '{s+=$1} END {printf "%.1f MB\n", s/1048576}'
             echo
+            echo "## brotli 전송 크기 합계 (*.br)"
+            find "$site/_framework" -name '*.br' -printf '%s\n' | awk '{s+=$1} END {printf "%.1f MB\n", s/1048576}'
+            echo
             echo "## 큰 파일 상위 15개 (gzip 기준)"
             find "$site/_framework" -name '*.gz' -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%7.2f MB  %s\n", $1/1048576, $2}'
+            echo
+            echo "## _framework 파일 목록"
+            ls -la "$site/_framework" | grep -v '\.gz$\|\.br$'
           } > "$site/BUILD_INFO.txt"
           cp test-result.txt "$site/TEST_RESULT.txt" || true
           cat "$site/BUILD_INFO.txt"

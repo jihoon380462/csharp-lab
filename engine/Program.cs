@@ -1,6 +1,2 @@
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-
-// UI는 순수 HTML/JS(wwwroot/index.html)가 담당하고,
-// .NET 쪽은 JS에서 부르는 엔진(Engine.Run)만 제공한다.
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
-await builder.Build().RunAsync();
+// 엔진은 Web Worker에서 Exports(JSExport)로만 사용한다. Main은 할 일이 없다.
+return;

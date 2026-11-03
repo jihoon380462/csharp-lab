@@ -7,22 +7,21 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Basic.Reference.Assemblies;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
-using Microsoft.JSInterop;
+using System.Text.Json.Serialization;
 
 namespace CsEngine;
 
 /// <summary>
 /// 브라우저 안에서 C# 코드를 컴파일(Roslyn)하고 실행하는 엔진.
-/// JS에서 DotNet.invokeMethodAsync('CsEngine', 'Run', code, stdin) 으로 부른다.
+/// 브라우저에서는 Exports.cs(JSExport)를 통해 Web Worker 안에서 불린다.
 /// </summary>
 public static class Engine
 {
-    public const string EngineVersion = "0.1.0";
-    public const int TimeLimitMs = 5000;
+    public const string EngineVersion = "0.2.0";
+    public const int TimeLimitMs = 10000;
     public const int MaxDepth = 2000;
     public const int MaxOutputChars = 100_000;
 
@@ -69,27 +68,40 @@ public static class Engine
         }
         """;
 
-    static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.CSharp12);
+    static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.CSharp13);
     static readonly SyntaxTree GlobalUsingsTree = CSharpSyntaxTree.ParseText(GlobalUsingsSource, ParseOptions, "GlobalUsings.cs", Encoding.UTF8);
     static readonly SyntaxTree GuardTree = CSharpSyntaxTree.ParseText(GuardSource, ParseOptions, "Guard.cs", Encoding.UTF8);
     static readonly CultureInfo Korean = MakeKorean();
     static IReadOnlyList<MetadataReference>? _references;
 
-    static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     static CultureInfo MakeKorean()
     {
         try { return new CultureInfo("ko"); } catch { return CultureInfo.InvariantCulture; }
     }
 
-    static IReadOnlyList<MetadataReference> References =>
-        _references ??= Net80.References.All.Cast<MetadataReference>().ToList();
+    /// <summary>엔진에 포함된 참조 어셈블리(labref.*.dll, LabRefs.props 참고)</summary>
+    static IReadOnlyList<MetadataReference> References => _references ??= LoadReferences();
 
-    [JSInvokable]
+    static List<MetadataReference> LoadReferences()
+    {
+        var asm = typeof(Engine).Assembly;
+        var list = new List<MetadataReference>();
+        foreach (var name in asm.GetManifestResourceNames().Where(n => n.StartsWith("labref.", StringComparison.Ordinal)))
+        {
+            using var s = asm.GetManifestResourceStream(name)!;
+            list.Add(MetadataReference.CreateFromStream(s, filePath: name["labref.".Length..]));
+        }
+        if (list.Count == 0) throw new InvalidOperationException("참조 어셈블리가 엔진에 없습니다.");
+        return list;
+    }
+
+    /// <summary>실행 중 출력을 조금씩 바깥(화면)으로 보내는 통로. 브라우저에서 설정한다.</summary>
+    public static Action<string>? OutputSink { get; set; }
+
     public static string GetVersion() => EngineVersion;
 
     /// <summary>첫 컴파일이 느리므로 페이지 로딩 직후 미리 한 번 돌려 둔다.</summary>
-    [JSInvokable]
     public static async Task<string> Warmup()
     {
         var sw = Stopwatch.StartNew();
@@ -97,7 +109,6 @@ public static class Engine
         return sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture);
     }
 
-    [JSInvokable]
     public static async Task<string> Run(string code, string? stdin)
     {
         var result = new RunResult();
@@ -113,7 +124,7 @@ public static class Engine
             result.Error = new ErrorInfo { Type = ex.GetType().Name, Message = detail.Length > 1500 ? detail[..1500] : detail, Friendly = "엔진 내부 오류가 났습니다. 이 화면을 캡처해 알려주세요." };
         }
         result.TotalMs = total.ElapsedMilliseconds;
-        return JsonSerializer.Serialize(result, JsonOptions);
+        return JsonSerializer.Serialize(result, LabJson.Default.RunResult);
     }
 
     static async Task RunCore(string code, string stdin, RunResult result)
@@ -177,7 +188,7 @@ public static class Engine
             return;
         }
 
-        var output = new CappedWriter(MaxOutputChars);
+        var output = new CappedWriter(MaxOutputChars, OutputSink);
         var oldOut = Console.Out;
         var oldErr = Console.Error;
         // 브라우저에서는 Console.In 읽기/SetIn이 막혀 있어(PlatformNotSupported) 내부 필드를 직접 바꾼다.
@@ -272,7 +283,6 @@ public static class Engine
         ConsoleInField?.SetValue(null, reader is null ? null : TextReader.Synchronized(reader));
     }
 
-    [JSInvokable]
     public static string Diagnose()
     {
         var sb = new StringBuilder();
@@ -349,6 +359,10 @@ public static class Engine
     }
 }
 
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(RunResult))]
+internal partial class LabJson : JsonSerializerContext { }
+
 public sealed class RunResult
 {
     public string Status { get; set; } = "";
@@ -382,22 +396,39 @@ public sealed class ErrorInfo
 
 sealed class OutputLimitException : Exception { }
 
-/// <summary>출력 상한을 넘으면 예외를 던져 프로그램을 멈추는 Writer.</summary>
+/// <summary>출력 상한을 넘으면 예외를 던져 프로그램을 멈추는 Writer. 실행 중에도 일정 간격으로 출력을 흘려보낸다.</summary>
 sealed class CappedWriter : StringWriter
 {
     readonly int _max;
+    readonly Action<string>? _sink;
+    int _sent;
+    long _lastSend = Environment.TickCount64;
     public bool LimitHit { get; private set; }
-    public CappedWriter(int max) => _max = max;
+    public CappedWriter(int max, Action<string>? sink) { _max = max; _sink = sink; }
 
     void Check()
     {
         if (LimitHit) throw new OutputLimitException();
-        if (GetStringBuilder().Length > _max)
+        var sb = GetStringBuilder();
+        if (sb.Length > _max)
         {
             LimitHit = true;
-            GetStringBuilder().Length = _max;
+            sb.Length = _max;
             throw new OutputLimitException();
         }
+        if (_sink is not null && Environment.TickCount64 - _lastSend >= 100) Pump();
+    }
+
+    /// <summary>아직 안 보낸 출력을 바깥으로 보낸다.</summary>
+    public void Pump()
+    {
+        if (_sink is null) return;
+        _lastSend = Environment.TickCount64;
+        var sb = GetStringBuilder();
+        if (sb.Length <= _sent) return;
+        var chunk = sb.ToString(_sent, sb.Length - _sent);
+        _sent = sb.Length;
+        try { _sink(chunk); } catch { }
     }
 
     public override void Write(char value) { if (LimitHit) throw new OutputLimitException(); base.Write(value); Check(); }

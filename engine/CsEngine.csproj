@@ -1,31 +1,50 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <!-- Blazor 없이 .NET 런타임만 올려 Web Worker(백그라운드)에서 엔진을 돌린다 -->
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>CsEngine</AssemblyName>
+    <RootNamespace>CsEngine</RootNamespace>
 
-    <!-- 학습자 코드가 어떤 표준 라이브러리 API를 부를지 모르므로 트리밍하지 않는다.
-         (트리밍하면 컴파일은 되는데 실행 중 MissingMethodException이 날 수 있음) -->
-    <PublishTrimmed>false</PublishTrimmed>
-
-    <!-- 한국어 문화권(ko) 사용: 한국어 오류 메시지 리소스를 쓰려면 Invariant 모드를 끄고
-         ICU는 필요한 조각(CJK)만 받는다 -->
+    <!-- 한국어 문화권(ko) 사용: Roslyn 한국어 오류 메시지 + ICU는 CJK 조각만 -->
     <InvariantGlobalization>false</InvariantGlobalization>
-    <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
-
-    <!-- Roslyn 한국어 에러 메시지만 포함 -->
     <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>
 
-    <!-- 압축본(.br/.gz)은 로더에서 직접 사용 -->
+    <!-- 안 쓰는 프레임워크 코드 제거. 단, 학습자 코드가 부를 수 있는 라이브러리는
+         아래 TrimmerRootAssembly로 통째로 남긴다 (LabRefs.props 목록과 짝) -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+
     <CompressionEnabled>true</CompressionEnabled>
   </PropertyGroup>
 
+  <Import Project="LabRefs.props" />
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.*" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
-    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.*" />
+    <!-- 학습자 코드 실행에 필요한 구현 (통째로 유지) -->
+    <TrimmerRootAssembly Include="System.Private.CoreLib" />
+    <TrimmerRootAssembly Include="System.Collections" />
+    <TrimmerRootAssembly Include="System.Collections.Concurrent" />
+    <TrimmerRootAssembly Include="System.Console" />
+    <TrimmerRootAssembly Include="System.Linq" />
+    <TrimmerRootAssembly Include="System.Memory" />
+    <TrimmerRootAssembly Include="System.ObjectModel" />
+    <TrimmerRootAssembly Include="System.Runtime.Numerics" />
+    <TrimmerRootAssembly Include="System.Text.RegularExpressions" />
+    <TrimmerRootAssembly Include="System.Threading" />
+    <!-- 컴파일러(Roslyn)는 내부 반사 사용이 있어 통째로 유지 -->
+    <TrimmerRootAssembly Include="Microsoft.CodeAnalysis" />
+    <TrimmerRootAssembly Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
   </ItemGroup>
 
 </Project>
