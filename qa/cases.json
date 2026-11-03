@@ -145,7 +145,7 @@
   "expect": {
    "status": "compile-error",
    "diagLines": [
-    4
+    3
    ]
   }
  },

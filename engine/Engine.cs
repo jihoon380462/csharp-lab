@@ -176,9 +176,24 @@ public static class Engine
         var guardedTree = CSharpSyntaxTree.Create((Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode)guarded, ParseOptions, "Program.cs", Encoding.UTF8);
         var buildCompilation = MakeCompilation(guardedTree, GuardTree);
 
-        using var peStream = new MemoryStream();
-        using var pdbStream = new MemoryStream();
-        var emit = buildCompilation.Emit(peStream, pdbStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
+        // 브라우저(단일 스레드)에서 Roslyn이 내부 Task.Run 결과를 기다리다 실패하는 경우가 있어,
+        // 직전 작업의 남은 대기열을 비우고(한 번 양보) 빌드하며, 실패하면 한 번 더 시도한다.
+        await Task.Delay(1);
+        var peStream = new MemoryStream();
+        var pdbStream = new MemoryStream();
+        EmitResult emit;
+        try
+        {
+            emit = buildCompilation.Emit(peStream, pdbStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
+        }
+        catch (PlatformNotSupportedException)
+        {
+            await Task.Delay(1);
+            peStream = new MemoryStream();
+            pdbStream = new MemoryStream();
+            emit = MakeCompilation(guardedTree, GuardTree).Emit(peStream, pdbStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
+            result.EmitRetried = true;
+        }
         result.CompileMs = sw.ElapsedMilliseconds;
         if (!emit.Success)
         {
@@ -388,6 +403,7 @@ public sealed class RunResult
     public long CompileMs { get; set; }
     public long RunMs { get; set; }
     public long TotalMs { get; set; }
+    public bool EmitRetried { get; set; }
 }
 
 public sealed class DiagnosticInfo
