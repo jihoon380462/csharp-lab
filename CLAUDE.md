@@ -34,4 +34,4 @@ tools/deploy.sh                           # QA 통과 후 GitHub Pages 배포
 
 ## 관련 저장소
 
-- `jihoon380462/python-academy` — 학습 사이트. C# 코스(타이핑 전용)가 이 엔진을 `/csharp-lab/core/cs-engine.js` 로 불러 쓸 예정 (그 저장소 EXPANSION.md 15절).
+- `jihoon380462/python-academy` — 학습 사이트. C# 코스(타이핑 전용)가 이 엔진을 `/csharp-lab/core/cs-engine.js` 로 불러 쓸 예정 (연결 설계는 아직 아카데미에 반영 안 됨).
