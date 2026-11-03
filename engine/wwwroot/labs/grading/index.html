@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>채점 실험</title>
+  <link rel="stylesheet" href="../../lab.css" />
+  <link rel="stylesheet" href="../shared/labs.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <a class="logo" href="../../" title="실험실로">C#</a>
+      <div>
+        <h1>채점 실험</h1>
+        <p class="sub">여러 파일 컴파일 + 테스트 일괄 채점 · <span id="ver">-</span></p>
+      </div>
+    </div>
+  </header>
+
+  <section class="loader" id="loader" aria-live="polite">
+    <div class="loader-row"><span id="loaderText">엔진 내려받는 중…</span><span id="loaderPct">0%</span></div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </section>
+
+  <nav class="examples" id="problems" aria-label="문제"></nav>
+
+  <main class="layout">
+    <section class="panel editor-panel">
+      <div class="panel-head"><span id="fileName">Solution.cs</span><span class="hint">Ctrl+Enter 채점</span></div>
+      <div class="desc" id="desc"></div>
+      <div class="editor" id="editorHost"></div>
+      <div id="symbar"></div>
+      <div class="livecheck" id="liveCheck"></div>
+      <details class="stdin" id="harnessBox">
+        <summary>채점 코드 보기 <small>(학습자에게는 숨기는 파일)</small></summary>
+        <pre class="harness" id="harness"></pre>
+      </details>
+      <div class="btn-row">
+        <button class="run" id="gradeBtn" disabled><span class="run-icon">▶</span><span id="gradeLabel">엔진 준비 중…</span></button>
+        <button class="ghost" id="answerBtn" type="button">정답 넣기</button>
+        <button class="ghost" id="resetBtn" type="button">처음으로</button>
+      </div>
+    </section>
+
+    <section class="panel out-panel">
+      <div class="panel-head"><span>채점 결과</span><span class="status" id="status"></span></div>
+      <div class="output" id="output"><p class="placeholder">▶ 채점을 누르면 테스트마다 결과가 나옵니다.</p></div>
+    </section>
+  </main>
+
+  <footer class="foot">컴파일은 한 번만 하고, 테스트마다 프로그램을 새로 올려(정적 변수 초기화) 실행합니다. 출력 비교는 줄 끝 공백·마지막 빈 줄을 무시합니다.</footer>
+
+  <script type="module" src="grading.js"></script>
+</body>
+</html>

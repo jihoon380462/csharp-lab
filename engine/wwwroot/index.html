@@ -13,7 +13,7 @@
       <span class="logo">C#</span>
       <div>
         <h1>C# 실험실</h1>
-        <p class="sub">브라우저 실행 엔진 테스트 · <span id="ver">v0.2.1</span></p>
+        <p class="sub">브라우저 실행 엔진 테스트 · <span id="ver">v0.3.0</span></p>
       </div>
     </div>
   </header>
@@ -35,10 +35,9 @@
         <span>Program.cs</span>
         <span class="hint">Ctrl+Enter 실행</span>
       </div>
-      <div class="editor">
-        <pre class="gutter" id="gutter" aria-hidden="true">1</pre>
-        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off" aria-label="C# 코드"></textarea>
-      </div>
+      <div class="editor" id="editorHost"></div>
+      <div id="symbar"></div>
+      <div class="livecheck" id="liveCheck" aria-live="polite"></div>
       <details class="stdin" id="stdinBox">
         <summary>입력값 <small>(Console.ReadLine이 한 줄씩 읽음)</small></summary>
         <textarea id="stdin" spellcheck="false" autocapitalize="off" autocorrect="off" rows="3" placeholder="예) 홍길동&#10;20"></textarea>
@@ -63,6 +62,12 @@
       </div>
     </section>
   </main>
+
+  <nav class="labs-links" aria-label="실험 페이지">
+    <span>🧪 실험:</span>
+    <a href="labs/grading/">채점 (여러 파일·테스트)</a>
+    <a href="labs/unity/">Unity 시뮬레이터</a>
+  </nav>
 
   <footer class="foot">
     자동 중단: 10초 · 재귀 2,000단계 · 출력 10만 자 (언제든 ■ 중지 가능). 모든 코드는 이 브라우저 안에서만 실행됩니다.

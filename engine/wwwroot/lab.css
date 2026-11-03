@@ -60,18 +60,9 @@ h1 { font-size: 19px; margin: 0; letter-spacing: -0.02em; }
 @media (hover: none) { .hint { display: none; } }
 
 /* 편집기 */
-.editor { position: relative; display: flex; height: 280px; background: #120f18; }
+.editor { position: relative; height: 280px; }
 @media (min-width: 900px) { .editor { height: 420px; } }
-.gutter, #code { font-family: var(--code-font); font-size: 14px; line-height: 21px; margin: 0; padding: 12px 0; }
-.gutter {
-  flex: none; width: 40px; text-align: right; padding-right: 8px; color: #5d5470; overflow: hidden;
-  user-select: none; border-right: 1px solid var(--line); background: #17131f;
-}
-#code {
-  flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent; color: var(--text);
-  padding-left: 12px; padding-right: 12px; tab-size: 4; white-space: pre; overflow: auto;
-}
-#code::selection { background: #4a3470; }
+
 
 .stdin { border-top: 1px solid var(--line); padding: 10px 14px; font-size: 13px; }
 .stdin summary { cursor: pointer; color: var(--muted); }
@@ -130,3 +121,15 @@ button.line {
 .run.stop { background: linear-gradient(135deg, #e0607a, #b23a55); }
 .run.stop:disabled { opacity: .55; }
 .stdout.live:empty::before { content: "…"; color: var(--muted); }
+
+/* 실시간 검사 줄 */
+.livecheck { min-height: 0; padding: 0 14px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.livecheck:not(:empty) { padding: 7px 14px; border-top: 1px solid var(--line); }
+.livecheck .e { color: var(--bad); font-weight: 700; }
+.livecheck .w { color: var(--warn); }
+.livecheck .okc { color: var(--ok); }
+.livecheck button.line { margin-left: 4px; }
+
+/* 실험 페이지 링크 */
+.labs-links { max-width: 1200px; margin: 14px auto 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--muted); }
+.labs-links a { color: var(--accent); text-decoration: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel); }

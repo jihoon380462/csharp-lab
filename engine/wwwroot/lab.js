@@ -1,67 +1,67 @@
-// C# 실험실 화면. 엔진은 core/cs-engine.js(백그라운드 Web Worker)를 사용한다.
+// C# 실험실 화면. 엔진은 core/cs-engine.js(백그라운드 Web Worker), 편집기는 core/code-editor.js, 폰 기호 칩은 core/symbol-bar.js.
 import { createCsEngine } from "./core/cs-engine.js";
+import { createCodeEditor } from "./core/code-editor.js";
+import { createSymbolBar } from "./core/symbol-bar.js";
 
 {
   const $ = (id) => document.getElementById(id);
-  const codeEl = $("code"), gutterEl = $("gutter"), stdinEl = $("stdin");
+  const stdinEl = $("stdin");
   const runBtn = $("runBtn"), runLabel = $("runLabel");
-  const outputEl = $("output"), statusEl = $("status");
+  const outputEl = $("output"), statusEl = $("status"), liveEl = $("liveCheck");
 
-  const lab = (window.__lab = { ready: false, warm: false, bytes: 0, loadMs: 0, warmMs: 0, lastResult: null, restarts: 0 });
+  const lab = (window.__lab = { ready: false, warm: false, bytes: 0, loadMs: 0, warmMs: 0, lastResult: null, restarts: 0, checks: 0, lastCheck: null });
   const t0 = performance.now();
 
-  // ───────── 편집기 ─────────
-  function updateGutter() {
-    const lines = codeEl.value.split("\n").length;
-    let s = "";
-    for (let i = 1; i <= lines; i++) s += i + "\n";
-    gutterEl.textContent = s;
-  }
-  codeEl.addEventListener("input", updateGutter);
-  codeEl.addEventListener("scroll", () => { gutterEl.scrollTop = codeEl.scrollTop; });
-  codeEl.addEventListener("keydown", (e) => {
-    if (e.key === "Tab" && !e.shiftKey) {
-      e.preventDefault();
-      const { selectionStart: s, selectionEnd: en, value } = codeEl;
-      codeEl.value = value.slice(0, s) + "    " + value.slice(en);
-      codeEl.selectionStart = codeEl.selectionEnd = s + 4;
-      updateGutter();
-    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      run();
-    } else if (e.key === "Enter") {
-      // 윗줄 들여쓰기 유지
-      e.preventDefault();
-      const { selectionStart: s, selectionEnd: en, value } = codeEl;
-      const lineStart = value.lastIndexOf("\n", s - 1) + 1;
-      const indent = (value.slice(lineStart, s).match(/^\s*/) || [""])[0];
-      const extra = value.slice(lineStart, s).trimEnd().endsWith("{") ? "    " : "";
-      const ins = "\n" + indent + extra;
-      codeEl.value = value.slice(0, s) + ins + value.slice(en);
-      codeEl.selectionStart = codeEl.selectionEnd = s + ins.length;
-      updateGutter();
-    }
-  });
+  // ───────── 편집기 (문법 색칠·오류 밑줄·줄 번호) + 폰 기호 칩 ─────────
+  const editor = (lab.editor = createCodeEditor($("editorHost"), {
+    id: "code",
+    gutterId: "gutter",
+    onRun: () => run(),
+    onChange: () => scheduleCheck(),
+  }));
+  const codeEl = editor.textarea;
+  createSymbolBar($("symbar"), editor);
+  const selectLine = (line) => editor.selectLine(line);
 
-  function selectLine(line) {
-    const lines = codeEl.value.split("\n");
-    if (line < 1 || line > lines.length) return;
-    let start = 0;
-    for (let i = 0; i < line - 1; i++) start += lines[i].length + 1;
-    codeEl.focus();
-    codeEl.setSelectionRange(start, start + lines[line - 1].length);
-    const lh = parseFloat(getComputedStyle(codeEl).lineHeight) || 20;
-    codeEl.scrollTop = Math.max(0, (line - 3) * lh);
+  // ───────── 실시간 검사: 입력이 멈추고 0.45초 뒤 진단만 받아 밑줄 표시 ─────────
+  let checkTimer = 0, checkSeq = 0;
+  function scheduleCheck() {
+    clearTimeout(checkTimer);
+    editor.setDiagnostics([]);   // 글자가 바뀌면 예전 밑줄은 위치가 어긋나므로 바로 지움
+    liveEl.innerHTML = "";
+    checkTimer = setTimeout(doCheck, 450);
+  }
+  async function doCheck() {
+    if (!lab.ready) { checkTimer = setTimeout(doCheck, 500); return; }
+    const code = codeEl.value;
+    const my = ++checkSeq;
+    const r = await engine.check(code);
+    if (my !== checkSeq || code !== codeEl.value || r.stopped || r.notReady) return;   // 그사이 또 고쳤으면 버림
+    lab.checks++;
+    lab.lastCheck = r;
+    const ds = (r.diagnostics || []).filter((d) => !d.file || d.file === "Program.cs");
+    editor.setDiagnostics(ds);
+    const errs = ds.filter((d) => d.severity === "error");
+    const warns = ds.filter((d) => d.severity === "warning");
+    if (!code.trim()) { liveEl.innerHTML = ""; return; }
+    if (errs.length) {
+      const d = errs[0];
+      liveEl.innerHTML = `<span class="e">오류 ${errs.length}개</span>${lineBtn(d.line)}${esc(d.message)}`;
+    } else if (warns.length) {
+      liveEl.innerHTML = `<span class="w">경고 ${warns.length}개</span>${lineBtn(warns[0].line)}${esc(warns[0].message)}`;
+    } else {
+      liveEl.innerHTML = `<span class="okc">✓ 문법 오류 없음</span>`;
+    }
+    liveEl.querySelectorAll("button.line").forEach((b) => b.addEventListener("click", () => selectLine(+b.dataset.line)));
   }
 
   // ───────── 예제 ─────────
   const exWrap = $("examples");
   function loadExample(ex) {
-    codeEl.value = ex.code;
+    editor.value = ex.code;
     stdinEl.value = ex.stdin || "";
     if (ex.stdin) $("stdinBox").open = true;
-    updateGutter();
-    codeEl.scrollTop = 0;
+    scheduleCheck();
     exWrap.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.id === ex.id));
   }
   for (const ex of window.LAB_EXAMPLES) {
@@ -98,6 +98,7 @@ import { createCsEngine } from "./core/cs-engine.js";
       setStatus("직접 중지함", "warn");
       return;
     }
+    if (r.status === "compile-error") editor.setDiagnostics((r.diagnostics || []).filter((d) => !d.file || d.file === "Program.cs"));
     if (r.stdout) html += `<pre class="stdout">${esc(r.stdout)}</pre>`;
     if (r.outputTruncated) html += `<p class="note">… 출력이 너무 길어 잘렸습니다.</p>`;
 

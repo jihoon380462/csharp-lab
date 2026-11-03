@@ -1,0 +1,38 @@
+/* 실험 페이지 공용 스타일 (실험실 lab.css 위에 덧씀) */
+a.logo { text-decoration: none; }
+.desc { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
+.desc code { font-family: var(--code-font); background: #ffffff12; padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+.harness { margin: 8px 0 0; padding: 10px; background: #120f18; border: 1px solid var(--line); border-radius: 8px; font-family: var(--code-font); font-size: 13px; white-space: pre; overflow-x: auto; }
+.btn-row { display: flex; gap: 8px; align-items: stretch; margin: 12px 14px 14px; }
+.btn-row .run { flex: 1; margin: 0; }
+.ghost { border: 1px solid var(--line); background: var(--panel-2); border-radius: 11px; padding: 0 14px; font-size: 14px; cursor: pointer; color: var(--text); }
+.ghost:disabled { opacity: .5; }
+
+/* 채점 결과 표 */
+.tests { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tests th, .tests td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.tests th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.tests td pre { margin: 0; font-family: var(--code-font); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+.tests .pass { color: var(--ok); font-weight: 700; }
+.tests .fail { color: var(--bad); font-weight: 700; }
+.tests .na { color: var(--muted); }
+.tests .hidden { color: var(--muted); font-style: italic; }
+.summary { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; }
+.summary b { font-size: 22px; }
+.summary.all b { color: var(--ok); }
+.summary.some b { color: var(--warn); }
+
+/* Unity 시뮬레이터 */
+.stage { position: relative; background: #0d0b12; border-bottom: 1px solid var(--line); }
+.stage canvas { display: block; width: 100%; aspect-ratio: 16 / 10; touch-action: none; }
+.stage .hud { position: absolute; left: 10px; top: 8px; font: 12px var(--code-font); color: #9a92ad; pointer-events: none; }
+.keypad { display: grid; grid-template-columns: repeat(3, 52px) 1fr 96px; grid-template-rows: 44px 44px; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.keypad button { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; font-size: 18px; color: var(--text); touch-action: none; -webkit-user-select: none; user-select: none; }
+.keypad button.on { background: #4a3470; border-color: var(--accent); }
+.keypad .k-up { grid-column: 2; grid-row: 1; }
+.keypad .k-left { grid-column: 1; grid-row: 2; }
+.keypad .k-down { grid-column: 2; grid-row: 2; }
+.keypad .k-right { grid-column: 3; grid-row: 2; }
+.keypad .k-space { grid-column: 5; grid-row: 1 / span 2; font-size: 14px; }
+.keypad .k-hint { grid-column: 4; grid-row: 1 / span 2; align-self: center; font-size: 12px; color: var(--muted); padding: 0 8px; }
+.console { max-height: 200px; }
