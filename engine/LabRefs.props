@@ -27,6 +27,12 @@
       <LogicalName>labref.%(Filename).dll</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+  <!-- 학습자 코드와 함께 컴파일하는 라이브러리 소스(예: UnityLite). 엔진 리소스 lib.<파일이름> 으로 들어간다 -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Core/Libraries/*.cs.txt">
+      <LogicalName>lib.%(Filename)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
   <Target Name="LabCheckRefs" BeforeTargets="BeforeBuild">
     <Error Condition="!Exists('$(LabRefDir)System.Runtime.dll')" Text="참조 팩을 찾을 수 없습니다: $(LabRefDir)" />
     <Message Importance="high" Text="LabRefs: $(LabRefDir)" />

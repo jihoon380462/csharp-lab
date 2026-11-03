@@ -1,0 +1,328 @@
+[
+ {
+  "id": "runfiles-two",
+  "kind": "runFiles",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Console.WriteLine(Helper.Greet(\"민수\"));\nConsole.WriteLine(Helper.Twice(21));"
+   },
+   {
+    "name": "Helper.cs",
+    "code": "public static class Helper\n{\n    public static string Greet(string n) => $\"안녕, {n}!\";\n    public static int Twice(int x) => x * 2;\n}"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "안녕, 민수!\n42\n"
+  }
+ },
+ {
+  "id": "runfiles-error-second-file",
+  "kind": "runFiles",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Console.WriteLine(\"시작\");\nHelper.Crash();"
+   },
+   {
+    "name": "Helper.cs",
+    "code": "public static class Helper\n{\n    public static void Crash()\n    {\n        int[] a = new int[1];\n        a[3] = 1;\n    }\n}"
+   }
+  ],
+  "expect": {
+   "status": "runtime-error",
+   "stdoutEquals": "시작\n",
+   "errorType": "IndexOutOfRangeException",
+   "errorLine": 6,
+   "errorFile": "Helper.cs"
+  }
+ },
+ {
+  "id": "runfiles-compile-error-file",
+  "kind": "runFiles",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Console.WriteLine(Helper.X);"
+   },
+   {
+    "name": "Helper.cs",
+    "code": "public static class Helper\n{\n    public static int X = \"글자\";\n}"
+   }
+  ],
+  "expect": {
+   "status": "compile-error",
+   "diagFiles": [
+    "Helper.cs"
+   ],
+   "diagLines": [
+    3
+   ]
+  }
+ },
+ {
+  "id": "grade-method",
+  "kind": "grade",
+  "files": [
+   {
+    "name": "Solution.cs",
+    "code": "public static class Solution\n{\n    public static int Add(int a, int b) => a + b;\n}"
+   },
+   {
+    "name": "Tests.cs",
+    "code": "var p = Console.ReadLine().Split(' ');\nConsole.WriteLine(Solution.Add(int.Parse(p[0]), int.Parse(p[1])));"
+   }
+  ],
+  "tests": [
+   {
+    "stdin": "1 2",
+    "expect": "3"
+   },
+   {
+    "stdin": "10 -4",
+    "expect": "6\n"
+   },
+   {
+    "stdin": "0 0",
+    "expect": "1"
+   },
+   {
+    "stdin": "5 5"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "passed": [
+    true,
+    true,
+    false,
+    null
+   ],
+   "stdouts": [
+    "3\n",
+    "6\n",
+    "0\n",
+    "10\n"
+   ],
+   "passedCount": 2
+  }
+ },
+ {
+  "id": "grade-static-isolation",
+  "kind": "grade",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Counter.N++;\nConsole.WriteLine(Counter.N);\nclass Counter { public static int N; }"
+   }
+  ],
+  "tests": [
+   {
+    "expect": "1"
+   },
+   {
+    "expect": "1"
+   },
+   {
+    "expect": "1"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "passed": [
+    true,
+    true,
+    true
+   ]
+  }
+ },
+ {
+  "id": "grade-runtime-in-one",
+  "kind": "grade",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "var p = Console.ReadLine().Split(' ');\nConsole.WriteLine(int.Parse(p[0]) / int.Parse(p[1]));"
+   }
+  ],
+  "tests": [
+   {
+    "stdin": "6 3",
+    "expect": "2"
+   },
+   {
+    "stdin": "1 0",
+    "expect": "0"
+   },
+   {
+    "stdin": "9 3",
+    "expect": "3"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "passed": [
+    true,
+    false,
+    true
+   ],
+   "testStatuses": [
+    "ok",
+    "runtime-error",
+    "ok"
+   ]
+  }
+ },
+ {
+  "id": "grade-compile-error",
+  "kind": "grade",
+  "files": [
+   {
+    "name": "Solution.cs",
+    "code": "public static class Solution\n{\n    public static int Add(int a, int b) => a + b\n}"
+   },
+   {
+    "name": "Tests.cs",
+    "code": "Console.WriteLine(Solution.Add(1, 2));"
+   }
+  ],
+  "tests": [
+   {
+    "expect": "3"
+   }
+  ],
+  "expect": {
+   "status": "compile-error",
+   "diagFiles": [
+    "Solution.cs"
+   ],
+   "diagLines": [
+    3
+   ]
+  }
+ },
+ {
+  "id": "check-error",
+  "kind": "check",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "int x = \"a\";\nConsole.WriteLine(x)"
+   }
+  ],
+  "expect": {
+   "diagLines": [
+    1,
+    2
+   ]
+  }
+ },
+ {
+  "id": "check-ok",
+  "kind": "check",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Console.WriteLine(1);"
+   }
+  ],
+  "expect": {
+   "diagLines": []
+  }
+ },
+ {
+  "id": "check-unity-toplevel",
+  "kind": "check",
+  "mode": "unity",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "Debug.Log(\"밖에 쓴 코드\");\n\npublic class A : MonoBehaviour { }"
+   }
+  ],
+  "expect": {
+   "diagIds": [
+    "LAB002"
+   ]
+  }
+ },
+ {
+  "id": "unity-move",
+  "kind": "unity",
+  "code": "using UnityEngine;\n\npublic class Player : MonoBehaviour\n{\n    public float speed = 3f;\n\n    void Start()\n    {\n        Debug.Log(\"시작 \" + transform.position);\n    }\n\n    void Update()\n    {\n        float h = Input.GetAxisRaw(\"Horizontal\");\n        transform.position += new Vector3(h, 0, 0) * speed * Time.deltaTime;\n        if (Time.frameCount == 60) Debug.Log(\"60프레임: \" + transform.position.x.ToString(\"F2\"));\n    }\n}",
+  "options": {
+   "frames": 60,
+   "inputScript": "0-59:RightArrow"
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "시작 (0.00, 0.00, 0.00)\n60프레임: 3.00\n"
+  }
+ },
+ {
+  "id": "unity-spawn-destroy",
+  "kind": "unity",
+  "code": "public class Spawner : MonoBehaviour\n{\n    int count = 0;\n\n    void Update()\n    {\n        if (Input.GetKeyDown(KeyCode.Space))\n        {\n            var go = new GameObject(\"총알\" + (++count));\n            go.AddComponent<Bullet>();\n        }\n        if (Time.frameCount == 5 || Time.frameCount == 30)\n            Debug.Log(\"총알 수: \" + Object.FindObjectsOfType<Bullet>().Length);\n    }\n}\n\n[Prefab]\npublic class Bullet : MonoBehaviour\n{\n    void Start() { GetComponent<SpriteRenderer>().color = Color.yellow; }\n\n    void Update()\n    {\n        transform.Translate(0, 5 * Time.deltaTime, 0);\n        if (transform.position.y > 0.45f)\n        {\n            Debug.Log(name + \" 사라짐\");\n            Destroy(gameObject);\n        }\n    }\n}",
+  "options": {
+   "frames": 30,
+   "inputScript": "0:Space;10:Space"
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "총알 수: 1\n총알1 사라짐\n총알2 사라짐\n총알 수: 0\n"
+  }
+ },
+ {
+  "id": "unity-toplevel-error",
+  "kind": "unity",
+  "code": "Debug.Log(\"밖에 쓴 코드\");\n\npublic class A : MonoBehaviour { }",
+  "options": {
+   "frames": 5
+  },
+  "expect": {
+   "status": "compile-error",
+   "diagIds": [
+    "LAB002"
+   ]
+  }
+ },
+ {
+  "id": "unity-runtime-error",
+  "kind": "unity",
+  "code": "public class Boom : MonoBehaviour\n{\n    int[] data = new int[3];\n\n    void Update()\n    {\n        if (Time.frameCount == 3)\n        {\n            Debug.Log(\"곧 오류\");\n            data[5] = 1;\n        }\n    }\n}",
+  "options": {
+   "frames": 10
+  },
+  "expect": {
+   "status": "runtime-error",
+   "stdoutEquals": "곧 오류\n",
+   "errorType": "IndexOutOfRangeException",
+   "errorLine": 10
+  }
+ },
+ {
+  "id": "unity-frame-timeout",
+  "kind": "unity",
+  "code": "public class Stuck : MonoBehaviour\n{\n    void Update()\n    {\n        while (true) { }\n    }\n}",
+  "options": {
+   "frames": 10
+  },
+  "expect": {
+   "status": "stopped",
+   "errorType": "Timeout"
+  }
+ },
+ {
+  "id": "unity-api",
+  "kind": "unity",
+  "code": "public class Mover : MonoBehaviour\n{\n    void Start()\n    {\n        transform.Translate(2, 1, 0);\n        Debug.Log(transform.position);\n        Debug.Log(Mathf.Clamp(15, 0, 10) + \" \" + Mathf.Lerp(0f, 10f, 0.25f) + \" \" + Vector2.Distance(Vector2.zero, new Vector2(3, 4)));\n        Debug.Log(gameObject.name + \" / \" + GetComponent<SpriteRenderer>().color);\n    }\n}",
+  "options": {
+   "frames": 1
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "(2.00, 1.00, 0.00)\n10 2.5 5\nMover / RGBA(1.000, 1.000, 1.000, 1.000)\n"
+  }
+ }
+]
