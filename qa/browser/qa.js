@@ -65,7 +65,27 @@ function check(e, r) {
     if (JSON.stringify(lines) !== JSON.stringify(e.diagLines)) p.push(`diagLines ${JSON.stringify(lines)} != ${JSON.stringify(e.diagLines)}`);
   }
   if (e.hasWarning && !(r.diagnostics || []).some((d) => d.severity === "warning")) p.push("경고 없음");
+  if (e.errorFile && (r.error && r.error.file) !== e.errorFile) p.push(`errorFile ${r.error && r.error.file} != ${e.errorFile}`);
+  const errs = (r.diagnostics || []).filter((d) => d.severity === "error");
+  if (e.diagFiles) {
+    const files = [...new Set(errs.map((d) => d.file))].sort();
+    if (JSON.stringify(files) !== JSON.stringify(e.diagFiles)) p.push(`diagFiles ${JSON.stringify(files)} != ${JSON.stringify(e.diagFiles)}`);
+  }
+  if (e.diagIds) for (const id of e.diagIds) if (!errs.some((d) => d.id === id)) p.push(`진단 ${id} 없음`);
   return { p, soft };
+}
+
+function checkGrade(e, r) {
+  const p = [];
+  if (e.status && e.status !== r.status) p.push(`status ${r.status} != ${e.status}`);
+  const tests = r.tests || [];
+  const norm = (v) => (v === true ? "true" : v === false ? "false" : "null");
+  if (e.passed && JSON.stringify(tests.map((t) => norm(t.passed))) !== JSON.stringify(e.passed.map(norm))) p.push(`passed ${JSON.stringify(tests.map((t) => t.passed))} != ${JSON.stringify(e.passed)}`);
+  if (e.stdouts && JSON.stringify(tests.map((t) => t.stdout)) !== JSON.stringify(e.stdouts)) p.push(`stdouts ${JSON.stringify(tests.map((t) => t.stdout))}`);
+  if (e.testStatuses && JSON.stringify(tests.map((t) => t.status)) !== JSON.stringify(e.testStatuses)) p.push(`testStatuses ${JSON.stringify(tests.map((t) => t.status))}`);
+  if (e.passedCount !== undefined && r.passed !== e.passedCount) p.push(`passedCount ${r.passed} != ${e.passedCount}`);
+  const c = check({ diagLines: e.diagLines, diagFiles: e.diagFiles, diagIds: e.diagIds }, r);
+  return p.concat(c.p);
 }
 
 async function newPage(errors, tag) {
@@ -181,7 +201,146 @@ async function newPage(errors, tag) {
     const mid = await page.eval(() => (document.querySelector(".stdout.live") || {}).textContent || "");
     const fin = await page.waitFor(() => window.__lab.lastResult, 20000);
     mark(/단계 1/.test(mid) && !/단계 3/.test(mid) && fin.stdout === "단계 1\n단계 2\n단계 3\n", "async 실행 중 단계별 출력", JSON.stringify(mid));
+
+    // ── 엔진 API 케이스 (qa/api-cases.json: runFiles · grade · check · unity) ──
+    const apiCases = JSON.parse(fs.readFileSync(path.join(path.dirname(CASES), "api-cases.json"), "utf8"));
+    for (const c of apiCases) {
+      const r = await page.eval(async (c) => {
+        const e = window.__lab.engine;
+        if (c.kind === "runFiles") return e.runFiles(c.files, c.stdin || "");
+        if (c.kind === "grade") return e.grade(c.files, c.tests);
+        if (c.kind === "check") return e.check(c.files, c.mode || "console");
+        if (c.kind === "unity") return e.runUnity(c.code, c.options);
+      }, c);
+      const probs = c.kind === "grade" ? checkGrade(c.expect, r) : check(c.expect, r).p.concat(check(c.expect, r).soft.filter((x) => c.expect.errorLine && x.startsWith("errorLine")));
+      if (probs.length) fails++;
+      report.cases.push({ id: "api:" + c.id, ok: !probs.length, problems: probs });
+      console.log(`${probs.length ? "FAIL" : "PASS"} api:${c.id}${probs.length ? " :: " + probs.join("; ") + "\n   " + JSON.stringify(r).slice(0, 600) : ""}`);
+    }
+
+    // ── 편집기: 문법 색칠 · 실시간 오류 밑줄 · 고치면 사라짐 ──
+    await page.eval(() => { const ed = window.__lab.editor; ed.value = 'int x = "글자";\nConsole.WriteLine(x);'; ed.textarea.dispatchEvent(new Event("input")); });
+    const sqOn = await page.waitFor(() => document.querySelector(".cse-sq .sq-e") && document.querySelector("#gutter .e") && /오류/.test(document.getElementById("liveCheck").textContent) && document.getElementById("liveCheck").textContent, 15000).catch(() => null);
+    mark(!!sqOn, "입력 중 오류 밑줄·줄 번호 표시·요약", String(sqOn).slice(0, 80));
+    const hl = await page.eval(() => ({ k: document.querySelectorAll(".cse-hl .t, .cse-hl .k").length, s: document.querySelectorAll(".cse-hl .s").length, f: document.querySelectorAll(".cse-hl .f").length }));
+    mark(hl.k > 0 && hl.s > 0 && hl.f > 0, "문법 색칠 (키워드·문자열·메서드)", JSON.stringify(hl));
+    // 겹침 정렬: 밑줄 글자 위치가 textarea 글자 위치와 같은지 (첫 줄 '"글자"' 시작 x)
+    const align = await page.eval(() => {
+      const sq = document.querySelector(".cse-sq .sq-e").getBoundingClientRect();
+      const ta = document.getElementById("code");
+      const cs = getComputedStyle(ta);
+      const m = document.createElement("canvas").getContext("2d");
+      m.font = cs.fontSize + " " + cs.fontFamily;
+      const expectX = ta.getBoundingClientRect().left + parseFloat(cs.paddingLeft) + m.measureText('int x = ').width;
+      return Math.round(Math.abs(sq.left - expectX));
+    });
+    mark(align <= 2, "밑줄 위치가 글자와 맞음 (겹침 정렬)", align + "px 차이");
+    await page.screenshot(`${SHOTS}/9-pc-squiggle.png`);
+    await page.eval(() => { const ed = window.__lab.editor; ed.value = 'int x = 3;\nConsole.WriteLine(x);'; ed.textarea.dispatchEvent(new Event("input")); });
+    const sqOff = await page.waitFor(() => /문법 오류 없음/.test(document.getElementById("liveCheck").textContent) && !document.querySelector(".cse-sq .sq-e"), 15000).catch(() => false);
+    mark(!!sqOff, "고치면 밑줄이 사라짐");
+    const checkMs = await page.eval(() => window.__lab.lastCheck && window.__lab.lastCheck.ms);
+    report.timings.checkMs = checkMs;
+    mark(checkMs !== undefined && checkMs < 1500, "실시간 검사 속도", checkMs + "ms");
+    // { 사이 Enter → 블록으로 펼침
+    await page.eval(() => { const ed = window.__lab.editor; ed.value = "if (true) {}"; ed.textarea.focus(); ed.textarea.setSelectionRange(11, 11); });
+    await page.key("Enter", "Enter", 13);
+    const blk = await page.eval(() => document.getElementById("code").value);
+    mark(blk === "if (true) {\n    \n}", "{} 사이 Enter → 블록 펼침", JSON.stringify(blk));
+    await page.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "hover" }, { name: "pointer", value: "fine" }] });
+    const barHidden = await page.eval(() => getComputedStyle(document.getElementById("symbar")).display);
+    mark(barHidden === "none", "PC(마우스)에서는 기호 칩 숨김", barHidden);
     await page.close();
+
+    // ── 채점 실험 페이지 ──
+    {
+      const gp = await newPage(errors, "grading");
+      await gp.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      await gp.send("Page.navigate", { url: base + "labs/grading/" });
+      await gp.waitFor(() => window.__lab && window.__lab.ready, 120000);
+      const gradeOnce = async () => {
+        await gp.eval(() => { window.__lab.lastGrade = null; document.getElementById("gradeBtn").click(); });
+        return gp.waitFor(() => window.__lab.lastGrade, 60000);
+      };
+      const g0 = await gradeOnce();
+      mark(g0.status === "ok" && g0.passed < g0.total, "채점: 처음 코드는 일부 실패", `${g0.passed}/${g0.total}`);
+      for (const id of ["add", "evens", "io"]) {
+        await gp.eval((id) => { document.querySelector(`#problems button[data-id="${id}"]`).click(); document.getElementById("answerBtn").click(); }, id);
+        const g = await gradeOnce();
+        mark(g.status === "ok" && g.passed === g.total, `채점: 정답 → 전부 통과 (${id})`, `${g.passed}/${g.total}, 컴파일 ${g.compileMs}ms, 전체 ${g.totalMs}ms`);
+        if (id === "evens") await gp.screenshot(`${SHOTS}/10-grading-pass.png`, true);
+      }
+      await gp.eval(() => { const ed = window.__lab.editor; document.querySelector('#problems button[data-id="add"]').click(); ed.value = ed.value.replace("return 0;", "return 0"); ed.textarea.dispatchEvent(new Event("input")); });
+      const gc = await gradeOnce();
+      mark(gc.status === "compile-error" && gc.diagnostics.some((d) => d.file === "Solution.cs"), "채점: 컴파일 오류는 학습자 파일 기준", gc.status);
+      await gp.close();
+    }
+
+    // ── Unity 시뮬레이터 페이지 ──
+    {
+      const up = await newPage(errors, "unity");
+      await up.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      await up.send("Page.navigate", { url: base + "labs/unity/" });
+      await up.waitFor(() => window.__lab && window.__lab.ready && !document.getElementById("playBtn").disabled, 120000);
+      await up.eval(() => document.getElementById("playBtn").click());
+      await up.waitFor(() => (window.__lab.frames || 0) > 0, 30000);
+      await sleep(1000);
+      const s1 = await up.eval(() => ({ frames: window.__lab.frames || 0, n: (window.__lab.scene || []).length, x: ((window.__lab.scene || [])[0] || {}).x }));
+      mark(s1.frames > 30 && s1.n === 1, "Unity: 실시간 프레임이 돈다 (오브젝트 1개)", JSON.stringify(s1));
+      const startLog = await up.eval(() => document.getElementById("output").textContent);
+      mark(/시작!/.test(startLog), "Unity: Start 의 Debug.Log 가 실행 중에 바로 보임", JSON.stringify(startLog.slice(0, 40)));
+      // 화면 버튼 ▶ 누르고 있기 → 오른쪽으로 이동
+      await up.eval(() => document.querySelector('#keypad [data-key="RightArrow"]').dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));
+      await sleep(700);
+      await up.eval(() => document.querySelector('#keypad [data-key="RightArrow"]').dispatchEvent(new PointerEvent("pointerup", { bubbles: true })));
+      const s2 = await up.eval(() => ((window.__lab.scene || [])[0] || {}).x);
+      mark(s2 > (s1.x || 0) + 1, "Unity: 화면 버튼 입력으로 이동", `x ${s1.x} → ${s2}`);
+      // 캔버스 키보드 입력 (Space → Debug.Log)
+      await up.eval(() => document.getElementById("stage").focus());
+      await up.keyDown(" ", "Space", 32);
+      await sleep(150);
+      await up.keyUp(" ", "Space", 32);
+      await sleep(300);
+      const log1 = await up.eval(() => document.getElementById("output").textContent);
+      mark(/지금 위치/.test(log1), "Unity: 키보드 입력 + Debug.Log 실시간 출력", JSON.stringify(log1.slice(-60)));
+      await up.screenshot(`${SHOTS}/11-unity-pc.png`);
+      await up.eval(() => document.getElementById("playBtn").click());
+      const st = await up.waitFor(() => window.__lab.lastResult && window.__lab.lastResult.status, 10000);
+      mark(st === "stopped-by-user", "Unity: ■ 중지", st);
+      // 총알 예제: Space 두 번 → 오브젝트 늘었다가 사라짐
+      await up.waitFor(() => window.__lab.ready && !document.getElementById("playBtn").disabled, 60000);
+      await up.eval(() => { document.querySelector('#examples button[data-id="shoot"]').click(); window.__lab.lastResult = null; document.getElementById("playBtn").click(); });
+      await up.waitFor(() => (window.__lab.scene || []).some((o) => o.name === "Ship"), 30000);
+      await sleep(300);
+      await up.eval(() => { const b = document.querySelector('#keypad [data-key="Space"]'); b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); });
+      await sleep(150);
+      await up.eval(() => { const b = document.querySelector('#keypad [data-key="Space"]'); b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true })); });
+      const n2 = await up.waitFor(() => (window.__lab.scene || []).length >= 2 && window.__lab.scene.length, 3000).catch(() => 0);
+      await sleep(1500);
+      const n3 = await up.eval(() => (window.__lab.scene || []).length);
+      const log2 = await up.eval(() => document.getElementById("output").textContent);
+      mark(n2 >= 2 && n3 === 1 && /화면 밖으로/.test(log2), "Unity: 총알 생성(AddComponent)·삭제(Destroy)", `${n2} → ${n3}`);
+      await up.eval(() => document.getElementById("playBtn").click());
+      await up.waitFor(() => window.__lab.ready && !document.getElementById("playBtn").disabled, 60000);
+      // ⏩ 60프레임(채점 모드) + 컴파일 오류 표시
+      await up.eval(() => { document.querySelector('#examples button[data-id="move"]').click(); window.__lab.lastResult = null; document.getElementById("testBtn").click(); });
+      const q = await up.waitFor(() => window.__lab.lastResult, 30000);
+      mark(q.status === "ok" && /시작!/.test(q.stdout), "Unity: 60프레임 빠른 시험", q.status + " " + q.runMs + "ms");
+      await up.eval(() => { const ed = window.__lab.editor; ed.value = ed.value.replace("float h", "flot h"); ed.textarea.dispatchEvent(new Event("input")); window.__lab.lastResult = null; document.getElementById("testBtn").click(); });
+      const q2 = await up.waitFor(() => window.__lab.lastResult, 30000);
+      mark(q2.status === "compile-error" && /오류/.test(await up.eval(() => document.getElementById("output").textContent)), "Unity: 컴파일 오류 표시", q2.status);
+      // 모든 예제가 컴파일되는지 (실행 오류 없이 30프레임)
+      const exRes = await up.eval(async () => {
+        const out = [];
+        for (const ex of window.__lab.examples) {
+          const r = await window.__lab.engine.runUnity(ex.code, { live: false, frames: 30 });
+          out.push(ex.id + ":" + r.status);
+        }
+        return out.join(" ");
+      });
+      mark(!/compile-error|runtime-error|internal|stopped/.test(exRes), "Unity: 예제 5개 30프레임 정상", exRes);
+      await up.close();
+    }
   }
 
   if (MODE !== "quick") {
@@ -221,6 +380,19 @@ async function newPage(errors, tag) {
     mark(ov <= 0, "모바일 가로 넘침 없음", `${ov}px`);
     const runVisible = await page.eval(() => { const r = document.getElementById("runBtn").getBoundingClientRect(); return r.width > 300 && r.height >= 44; });
     mark(runVisible, "모바일 실행 버튼 크기(터치)");
+    await page.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "none" }, { name: "pointer", value: "coarse" }] });
+    // 폰 기호 칩: 보이고, ( ) 를 누르면 () 넣고 커서는 가운데
+    const chip = await page.eval(() => {
+      const bar = document.getElementById("symbar");
+      const vis = getComputedStyle(bar).display !== "none" && bar.getBoundingClientRect().height > 30;
+      const ed = window.__lab.editor; ed.value = "Console.WriteLine"; ed.textarea.focus(); ed.textarea.setSelectionRange(17, 17);
+      [...bar.querySelectorAll("button")].find((b) => b.textContent === "( )").click();
+      [...bar.querySelectorAll("button")].find((b) => b.textContent === '" "').click();
+      const t = ed.textarea;
+      return { vis, value: t.value, caret: t.selectionStart, focused: document.activeElement === t };
+    });
+    mark(chip.vis && chip.value === 'Console.WriteLine("")' && chip.caret === 19, "모바일 기호 칩 (짝 기호·커서 가운데)", JSON.stringify(chip));
+    await page.screenshot(`${SHOTS}/12-mobile-symbar.png`);
 
     await page.send("Page.reload", {});
     await sleep(300);
@@ -228,6 +400,19 @@ async function newPage(errors, tag) {
     report.timings.mobileRevisit = st2;
     console.log("모바일 재방문 (캐시):", JSON.stringify(st2));
     await page.close();
+
+    // 모바일: 채점·Unity 페이지 화면
+    for (const [name, url] of [["grading", "labs/grading/"], ["unity", "labs/unity/"]]) {
+      const mp = await newPage(errors, "mobile-" + name);
+      await mp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+      await mp.send("Page.navigate", { url: base + url });
+      await mp.waitFor(() => window.__lab && window.__lab.ready, 120000);
+      await sleep(800);
+      const ov2 = await mp.eval(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      mark(ov2 <= 0, `모바일 ${name} 페이지 가로 넘침 없음`, ov2 + "px");
+      await mp.screenshot(`${SHOTS}/13-mobile-${name}.png`, true);
+      await mp.close();
+    }
   }
 
   mark(errors.length === 0, "콘솔 오류 없음", errors.join(" | ").slice(0, 1500));

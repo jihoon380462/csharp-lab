@@ -324,5 +324,17 @@
    "status": "ok",
    "stdoutEquals": "(2.00, 1.00, 0.00)\n10 2.5 5\nMover / RGBA(1.000, 1.000, 1.000, 1.000)\n"
   }
+ },
+ {
+  "id": "unity-autospawn-count",
+  "kind": "unity",
+  "code": "public class A : MonoBehaviour { void Start() { Debug.Log(Object.FindObjectsOfType<MonoBehaviour>().Length); } }\npublic class B : MonoBehaviour { }\n[Prefab] public class C : MonoBehaviour { }\npublic abstract class D : MonoBehaviour { }",
+  "options": {
+   "frames": 1
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "2\n"
+  }
  }
 ]

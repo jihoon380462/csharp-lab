@@ -408,7 +408,7 @@ public static class UnityLiteHost
 
         // 장면 시작: MonoBehaviour 클래스마다 오브젝트 하나씩 ([Prefab] 이 붙은 것은 제외)
         var types = typeof(UnityLiteHost).Assembly.GetTypes()
-            .Where(t => t.IsClass && !t.IsAbstract && typeof(UnityEngine.MonoBehaviour).IsAssignableFrom(t)
+            .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(UnityEngine.MonoBehaviour)) && t.Namespace != "UnityEngine"
                         && t.GetCustomAttribute<UnityEngine.PrefabAttribute>() is null
                         && t.GetConstructor(Type.EmptyTypes) is not null)
             .ToList();
@@ -442,6 +442,7 @@ public static class UnityLiteHost
 
             if (Live)
             {
+                Console.Out.Flush();   // 이번 프레임의 Debug.Log 를 바로 화면으로
                 FrameSink?.Invoke(UnityEngine.Scene.Snapshot());
                 int wait = 16 - (int)(Environment.TickCount64 - now);
                 await Task.Delay(Math.Max(1, wait));

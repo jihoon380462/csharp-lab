@@ -268,8 +268,21 @@ public static class Engine
         return all;
     }
 
+    static SyntaxTree? _unityTree, _unityGuardedTree;
+
+    /// <summary>파싱. UnityLite 는 매번 같으므로 한 번만 파싱해 둔다.</summary>
     static SyntaxTree Parse(SourceFile f) =>
-        CSharpSyntaxTree.ParseText(WithChecksum(f.Code, f.Name), ParseOptions, f.Name, Encoding.UTF8);
+        f.Name == UnityLibName
+            ? _unityTree ??= CSharpSyntaxTree.ParseText(WithChecksum(f.Code, f.Name), ParseOptions, f.Name, Encoding.UTF8)
+            : CSharpSyntaxTree.ParseText(WithChecksum(f.Code, f.Name), ParseOptions, f.Name, Encoding.UTF8);
+
+    static SyntaxTree Guarded(SyntaxTree t)
+    {
+        if (t.FilePath == UnityLibName && _unityGuardedTree is not null) return _unityGuardedTree;
+        var g = CSharpSyntaxTree.Create((Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode)new GuardRewriter().Visit(t.GetRoot()), ParseOptions, t.FilePath, Encoding.UTF8);
+        if (t.FilePath == UnityLibName) _unityGuardedTree = g;
+        return g;
+    }
 
     /// <summary>
     /// 진단 모으기. 학습자 파일은 오류+경고, 라이브러리 파일(UnityLite.cs)은 오류만, 내부 파일(GlobalUsings/Guard)은 숨김.
@@ -351,8 +364,7 @@ public static class Engine
         }
 
         // ── 2) 보호 코드를 끼워 넣은 버전으로 실제 빌드 ──
-        var guardedTrees = trees.Select(t =>
-            CSharpSyntaxTree.Create((Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode)new GuardRewriter().Visit(t.GetRoot()), ParseOptions, t.FilePath, Encoding.UTF8)).ToList();
+        var guardedTrees = trees.Select(Guarded).ToList();
 
         // 브라우저(단일 스레드)에서 Roslyn이 내부 Task.Run 결과를 기다리다 실패하는 경우가 있어,
         // 직전 작업의 남은 대기열을 비우고(한 번 양보) 빌드하며, 실패하면 한 번 더 시도한다. (docs/PITFALLS.md 3)

@@ -22,7 +22,8 @@ sealed class CappedWriter : StringWriter
             sb.Length = _max;
             throw new OutputLimitException();
         }
-        if (_sink is not null && Environment.TickCount64 - _lastSend >= 100) Pump();
+        // 첫 출력은 바로, 그다음은 0.1초마다 바깥으로
+        if (_sink is not null && (_sent == 0 || Environment.TickCount64 - _lastSend >= 100)) Pump();
     }
 
     /// <summary>아직 안 보낸 출력을 바깥으로 보낸다.</summary>
@@ -36,6 +37,9 @@ sealed class CappedWriter : StringWriter
         _sent = sb.Length;
         try { _sink(chunk); } catch { }
     }
+
+    /// <summary>Console.Out.Flush() → 쌓인 출력 바로 보내기 (Unity 모드는 프레임마다 부름)</summary>
+    public override void Flush() => Pump();
 
     public override void Write(char value) { if (LimitHit) throw new OutputLimitException(); base.Write(value); Check(); }
     public override void Write(string? value) { if (LimitHit) throw new OutputLimitException(); base.Write(value); Check(); }

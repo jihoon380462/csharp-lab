@@ -334,6 +334,8 @@ async function play() {
   if (!lab.ready) return;
   playing = true;
   scene = [];
+  lab.scene = [];
+  lab.frames = 0;
   consoleText = "";
   out.innerHTML = "";
   setBtn("stop");

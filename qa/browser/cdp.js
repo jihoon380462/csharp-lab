@@ -68,6 +68,8 @@ function connect(url) {
         const r = await page.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: fullPage, ...(clip ? { clip } : {}) });
         fs.writeFileSync(file, Buffer.from(r.data, "base64"));
       },
+      keyDown(key, code, keyCode) { return page.send("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: keyCode }); },
+      keyUp(key, code, keyCode) { return page.send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: keyCode }); },
       async key(key, code, keyCode, modifiers = 0) {
         await page.send("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: keyCode, modifiers });
         await page.send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: keyCode, modifiers });
