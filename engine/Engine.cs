@@ -67,8 +67,8 @@ public static class Engine
         """;
 
     static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.CSharp12);
-    static readonly SyntaxTree GlobalUsingsTree = CSharpSyntaxTree.ParseText(GlobalUsingsSource, ParseOptions, "GlobalUsings.cs");
-    static readonly SyntaxTree GuardTree = CSharpSyntaxTree.ParseText(GuardSource, ParseOptions, "Guard.cs");
+    static readonly SyntaxTree GlobalUsingsTree = CSharpSyntaxTree.ParseText(GlobalUsingsSource, ParseOptions, "GlobalUsings.cs", Encoding.UTF8);
+    static readonly SyntaxTree GuardTree = CSharpSyntaxTree.ParseText(GuardSource, ParseOptions, "Guard.cs", Encoding.UTF8);
     static readonly CultureInfo Korean = MakeKorean();
     static IReadOnlyList<MetadataReference>? _references;
 
