@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.3.0 — 2026-11-03
+- 엔진: **여러 파일**(`runFiles`) · **일괄 채점**(`grade`: 컴파일 1번 + 테스트마다 새로 올려 실행·출력 비교) · **진단만**(`check`, 실행 중에도 응답) · **Unity 모드**(`runUnity`, UnityLite 라이브러리 + 프레임 루프, 실시간/고정 시간·입력 대본).
+- 결과에 파일 이름(`diagnostics[].file`, `error.file`) 추가. 데스크톱 API `RunFilesAsync`·`GradeAsync`·`Check`·`RunUnityAsync`.
+- 웹 모듈: `core/code-editor.js`(문법 색칠·오류 밑줄·줄 번호·자동 들여쓰기), `core/symbol-bar.js`(폰 기호 칩). 실험실 화면에 입력 중 실시간 검사.
+- 실험 페이지: `labs/grading/`(채점), `labs/unity/`(Unity 시뮬레이터: 캔버스·화면 키·예제 5개).
+- 실행 중 첫 출력은 바로 보냄(이전엔 0.1초 뒤 다음 출력이 있어야 보였음).
+- 테스트: `qa/api-cases.json`(16개, 데스크톱·브라우저 공용), 브라우저 QA 에 편집기·기호 칩·채점·Unity 항목.
+- 문서: `docs/ACADEMY.md`(아카데미 연결 설계, 아카데미 저장소는 건드리지 않음).
+
 ## v0.2.1 — 2026-11-03
 - 저장소 정리: 엔진 소스를 `engine/Core/`(플랫폼 무관: Engine·GuardRewriter·RunResult·CappedWriter)와 `engine/Browser/`(JSExport·Main)로 분리.
 - 데스크톱용 타입 API `Engine.RunAsync(code, stdin) → RunResult`, `Engine.ToJson` 추가 (기존 `Run` 은 그대로 JSON 문자열).

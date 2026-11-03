@@ -26,7 +26,7 @@ S=/tmp/lab        # 아무 작업 폴더
 tools/ship.sh "고친 내용 요약
 
 Co-Authored-By: ..." $S/serve                 # 커밋·push → CI 테스트+빌드 대기 → build-output 을 $S/serve/csharp-lab 에
-node qa/browser/qa.js $S/serve qa/cases.json $S/shots all   # 실패 합계 0 이어야 함 (약 3분)
+node qa/browser/qa.js $S/serve qa/cases.json $S/shots all   # 실패 합계 0 이어야 함 (약 5분: 케이스 54 + 예제 + 편집기 + 채점·Unity 페이지 + 모바일)
 # $S/shots/*.png 를 눈으로 확인 (PC 로딩·완료·예제, 모바일 로딩·완료·오류)
 tools/deploy.sh                                 # QA 한 build-output 그대로 Pages 에
 ```
@@ -62,6 +62,15 @@ tools/deploy.sh                                 # QA 한 build-output 그대로 
 | `deploy` 실패 | `gh run view <id> --log` | Pages 가 꺼짐(0절 설정), `build-output` 브랜치 없음(빌드 먼저) |
 | 배포했는데 옛 버전이 보임 | 화면 맨 위 버전 | Pages 캐시(최대 10분) → 새로고침. 파일 이름에 해시가 있어 엔진 파일은 섞이지 않음 |
 | 폰에서만 문제 | 실제 기기 | 헤드리스 CPU 제한이 Worker 에 안 걸림(PITFALLS 12) → 사용자에게 화면·측정값(엔진 로딩·예열·컴파일) 캡처 요청 |
+| 입력해도 오류 밑줄이 안 생김 | `__lab.lastCheck`, 콘솔 | 엔진 준비 전(준비 후 자동 재시도) / 코드가 바뀌어 결과를 버림(정상) / `check` 응답 `notReady` |
+| 밑줄·색칠 위치가 글자와 어긋남 | QA 「겹침 정렬」 | 편집기 글꼴·크기·padding 을 textarea 와 layer 에 다르게 줌(페이지 CSS 가 `.cse-*` 나 `textarea` 를 덮어씀) / `tab-size` 차이 |
+| 편집기가 납작해짐 | host 의 높이 | 편집기는 host 높이를 따름 → host 에 `height` 지정 (`.cse` 에 height 를 넣지 말 것) |
+| 폰에서 기호 칩이 안 보임 / PC 에서 보임 | `matchMedia("(hover:hover) and (pointer:fine)")` | 기기 판별 규칙(symbol-bar.js CSS). 펜·터치 노트북은 마우스 기기로 볼 수 있음 → `always:true` |
+| Unity: 실행해도 한참 안 움직임 | `__lab.frames` | 첫 실행은 예열 + UnityLite 컴파일로 PC 약 3초. 이후 빠름 |
+| Unity: 오브젝트가 안 생김 | 진단 `LAB002`, `[Prefab]` | 클래스 밖에 문장을 씀 / `[Prefab]` 붙음 / 매개변수 있는 생성자만 있음 |
+| Unity: 키 입력이 안 먹음 | `__lab.keys` | 캔버스에 포커스가 없음(키보드) / `engine.setInput` 이 안 감. 짧게 눌렀다 떼면 프레임 사이에 사라질 수 있음(입력은 프레임마다 읽음) |
+| Unity: `Random`/`Object` 가 모호하다는 오류(CS0104) | 학습자 코드의 `using System;` | 실제 Unity 와 같은 현상 → `UnityEngine.Random` 처럼 쓰거나 `using System;` 을 빼라고 안내 |
+| 채점: 정답인데 실패 | 결과 표의 실제/기대 | 출력 끝 공백·빈 줄은 무시되지만 **가운데 공백·대소문자·쉼표 뒤 공백**은 다름 / 숨은 테스트의 경계값 |
 
 ## 4. 계약 지키기 — 아카데미가 쓰는 것
 

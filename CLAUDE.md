@@ -5,14 +5,15 @@
 
 ## 무엇이 있나
 
-- **브라우저 안 C# 실행 엔진**: .NET 10 WebAssembly + Roslyn 컴파일러, Web Worker 에서 실행. 서버 없음.
+- **브라우저 안 C# 실행 엔진**: .NET 10 WebAssembly + Roslyn 컴파일러, Web Worker 에서 실행. 서버 없음. 실행·여러 파일·일괄 채점·진단만·Unity 모드(UnityLite).
+- **웹 모듈**: 엔진 클라이언트(`core/cs-engine.js`), 편집기(`core/code-editor.js`), 폰 기호 칩(`core/symbol-bar.js`).
   - 주소: https://jihoon380462.github.io/csharp-lab/ (실험실 화면)
 - **검증된 기능 목록**: `FEATURES.md` — ✅ 표시된 것만 다른 프로젝트에 가져다 쓴다. 🧪 는 실험 중.
 - **문서** (`docs/`, 목적별 — 안내는 `docs/README.md`)
   - 🔎 찾아볼 때 `REFERENCE.md` — 위치 색인, 웹·데스크톱 API, 결과 형식(계약), 지원 범위, 제한값, 용어
   - ➕ 추가할 때 `ADD.md` — 기능·케이스·라이브러리·예제·오류 설명 추가 절차와 체크리스트
   - 🔧 유지보수할 때 `MAINTAIN.md` — 작업 환경 제약, 수정→QA→배포, 증상별 진단표, 업그레이드, 되돌리기, 정기 점검
-  - 보조: `ARCHITECTURE.md`(구조), `PITFALLS.md`(브라우저 .NET 함정 — 다른 C#/WebAssembly 작업에도 유용), `CHANGELOG.md`
+  - 보조: `ARCHITECTURE.md`(구조), `PITFALLS.md`(브라우저 .NET 함정 — 다른 C#/WebAssembly 작업에도 유용), `ACADEMY.md`(아카데미 연결 설계안), `CHANGELOG.md`
 
 ## 작업 규칙 (사용자 지시)
 
@@ -34,4 +35,4 @@ tools/deploy.sh                           # QA 통과 후 GitHub Pages 배포
 
 ## 관련 저장소
 
-- `jihoon380462/python-academy` — 학습 사이트. **이 저장소 작업 중에는 읽기만 한다**(브랜치·커밋·PR 금지, 사용자 지시 2026-11-03). C# 코스(타이핑 전용)가 이 엔진을 `/csharp-lab/core/cs-engine.js` 로 불러 쓸 예정 (연결 설계는 아직 아카데미에 반영 안 됨).
+- `jihoon380462/python-academy` — 학습 사이트. **이 저장소 작업 중에는 읽기만 한다**(브랜치·커밋·PR 금지, 사용자 지시 2026-11-03). C# 코스(타이핑 전용)가 이 엔진을 `/csharp-lab/core/cs-engine.js` 로 불러 쓸 예정 (설계안은 `docs/ACADEMY.md`, 아카데미 쪽 반영은 그 저장소 절차로).

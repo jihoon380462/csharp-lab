@@ -36,7 +36,8 @@
 | `engine/Core/Engine.cs` | 엔진 본체. `RunAsync`/`Run`, 컴파일 옵션, 진입점 처리(async Main), 콘솔 입출력 연결, 실행 오류 해석(쉬운 설명·줄 번호) |
 | `engine/Core/GuardRewriter.cs` | 무한 반복·재귀 감시 코드 삽입 (줄 번호 보존) |
 | `engine/Core/RunResult.cs` | 결과 모양 + JSON 소스 생성기(트리밍 환경용) |
-| `engine/Core/CappedWriter.cs` | 콘솔 출력 받기: 상한 초과 시 중단, 0.1초마다 바깥으로 흘려보냄 |
+| `engine/Core/CappedWriter.cs` | 콘솔 출력 받기: 상한 초과 시 중단, 첫 출력은 바로·이후 0.1초마다 바깥으로 흘려보냄(`Flush` 도 전송) |
+| `engine/Core/Libraries/UnityLite.csx` | Unity 흉내 라이브러리(`namespace UnityEngine`) + 프레임 루프(`UnityLiteHost`). 엔진 리소스로 들어가 Unity 모드에서 학습자 코드와 함께 컴파일됨 |
 | `engine/Browser/Exports.cs` | JS 에서 부르는 진입점(`[JSExport]`), 실행 중 출력 → JS(`[JSImport] globalThis.labPostOutput`) |
 | `engine/Browser/Program.cs` | 빈 Main (WebAssembly SDK 가 Exe 를 요구) |
 
@@ -47,15 +48,20 @@
 | 파일 | 역할 |
 |---|---|
 | `core/cs-engine.js` | **재사용 모듈(계약)**. Worker 만들기·메시지 주고받기·중지/재시작·진행률 계산 |
-| `core/engine-worker.js` | Worker 본체. 압축본(brotli→gzip→원본) 직접 받아 풀기, 런타임 시작, 한국어 리소스 확인, 예열, 실행 대기열 |
+| `core/engine-worker.js` | Worker 본체. 압축본(brotli→gzip→원본) 직접 받아 풀기, 런타임 시작, 한국어 리소스 확인, 예열, 실행 대기열(`check` 는 우회), Unity 입력 보관 |
+| `core/code-editor.js` | 편집기: textarea(글자 투명) 뒤에 색칠 layer·밑줄 layer 를 겹쳐 그림, 줄 번호, 키 처리 |
+| `core/symbol-bar.js` | 폰 기호 칩 |
 | `index.html` `lab.js` `lab.css` `examples.js` | 실험실 화면(편집기·예제·진행률·실행/중지·출력·측정값) |
-| `labs/` | 실험 중인 기능 (검증되면 core 로 이동) |
+| `labs/grading/` | 채점 실험 페이지 |
+| `labs/unity/` | Unity 시뮬레이터 페이지 (캔버스 그리기·키 입력) |
+| `labs/shared/` | 실험 페이지 공용(`boot.js` 엔진 부팅·로딩 막대, `labs.css`) |
 
 ### 검사·도구
 
 | 파일 | 역할 |
 |---|---|
 | `qa/cases.json` | 테스트 케이스(코드·입력·기대 결과). 데스크톱 테스트와 브라우저 QA 가 함께 씀 |
+| `qa/api-cases.json` | 엔진 API 케이스(runFiles·grade·check·unity). 역시 양쪽 공용 |
 | `tests/EngineTests/` | 데스크톱 .NET 에서 cases.json 실행 (CI 에서 매번) |
 | `qa/browser/cdp.js` | npm 없이 크롬 DevTools 프로토콜로 페이지 조작 |
 | `qa/browser/qa.js` | 브라우저 QA 전체(케이스·예제·편집기·중지·반응성·실시간 출력·연속 실행·모바일·로딩 시간) |
@@ -73,6 +79,12 @@
 6. 콘솔 가로채기: `SetOut/SetError` → `CappedWriter`, 입력 → `StringReader(stdin)`.
 7. 진입점 실행. `<Main>`(async 래퍼)이면 진짜 async 메서드(`<Main>$`)를 찾아 `await`.
 8. 예외 → 쉬운 설명 + PDB 로 학습자 코드 줄 찾기. 감시 예외면 `stopped`.
+
+## 3-1. 채점·진단·Unity 의 흐름
+
+- **grade**: `CompileAsync` 한 번 → 테스트마다 `ExecuteAsync`(같은 바이트를 `Assembly.Load` 로 새로 올림 → 정적 변수 초기화, 감시 마감 새로) → `NormalizeOutput` 으로 비교.
+- **check**: 파싱 + `GetDiagnostics` 만(Emit 없음). Worker 가 대기열에 넣지 않고 바로 처리 → 긴 실행·Unity 실시간 중에도 응답.
+- **runUnity**: 파일 목록에 `UnityLite.cs` 를 붙이고 기본 using 을 Unity 식으로 바꿔 컴파일(UnityLite 파싱·감시 삽입 결과는 캐시) → 실행 전에 `UnityLiteHost` 정적 필드(프레임 수·실시간·입력 대본·입력/장면 통로)를 리플렉션으로 설정 → `Main` 이 MonoBehaviour 마다 오브젝트를 만들고 프레임 루프. 프레임마다 감시 마감을 2초로 다시 잡음. 실시간이면 프레임마다 `Console.Out.Flush()`(출력 전송) + 장면 문자열을 `labPostFrame` 으로 보내고 `Task.Delay` 로 약 16ms 쉼(그 사이 Worker 가 입력 메시지를 받음).
 
 ## 4. 로딩 (웹)
 

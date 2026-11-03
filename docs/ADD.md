@@ -5,11 +5,11 @@
 
 ## 0. 공통 체크리스트 (무엇을 추가하든 끝에)
 
-- [ ] `qa/cases.json` 에 케이스 추가 (엔진 동작이면 필수) — 1절
+- [ ] `qa/cases.json`(코드 하나) 또는 `qa/api-cases.json`(여러 파일·채점·진단·Unity)에 케이스 추가 (엔진 동작이면 필수) — 1절, 10절
 - [ ] 브라우저 전용 동작이면 `qa/browser/qa.js` 에 `mark(...)` 추가 — 7절
 - [ ] 결과 모양(REFERENCE 4절)을 **지우거나 바꾸지 않았다** (추가만)
 - [ ] `tools/ship.sh` → CI 데스크톱 테스트 통과 → 브라우저 QA `all` 실패 0 → 스크린샷 눈으로 확인
-- [ ] 버전 올림 + `docs/CHANGELOG.md` — 10절
+- [ ] 버전 올림 + `docs/CHANGELOG.md` — 12절
 - [ ] 검증 끝난 것은 `FEATURES.md` ✅ 표에 — 8절
 - [ ] `tools/deploy.sh`
 
@@ -33,14 +33,21 @@
 
 ## 2. 실험 기능 추가 (labs)
 
-1. `engine/wwwroot/labs/<이름>/index.html` 을 만든다. 엔진 불러오기:
+1. `engine/wwwroot/labs/<이름>/index.html` + `<이름>.js` 를 만든다. 공용 부팅(`../shared/boot.js`)을 쓰면 로딩 막대까지 자동 연결:
    ```html
-   <script type="module">
-     import { createCsEngine } from "../../core/cs-engine.js";
-     const engine = createCsEngine({ onReady: () => console.log("ready") });
-     const r = await engine.run('Console.WriteLine("lab");');
-   </script>
+   <link rel="stylesheet" href="../../lab.css" /><link rel="stylesheet" href="../shared/labs.css" />
+   <!-- 로딩 막대: #loader #barFill #loaderPct #loaderText, 버전: #ver (labs/grading/index.html 참고) -->
+   <script type="module" src="이름.js"></script>
    ```
+   ```js
+   import { bootEngine, esc } from "../shared/boot.js";
+   import { createCodeEditor } from "../../core/code-editor.js";
+   import { createSymbolBar } from "../../core/symbol-bar.js";
+   const engine = bootEngine({ onReady() { /* 버튼 켜기 */ }, onOutput(chunk) {} });
+   const ed = createCodeEditor(document.getElementById("editorHost"), { id: "code" });
+   createSymbolBar(document.getElementById("symbar"), ed);
+   ```
+   QA 가 상태를 볼 수 있게 `window.__lab`(boot.js 가 `ready`·`warm`·`state`·`engine` 을 채움)에 마지막 결과 등을 넣어 둔다.
 2. `FEATURES.md` 「🧪 실험 중」에 한 줄: `- <이름>: 무엇을 확인하려는지 (labs/<이름>/)`.
 3. 실험실 메인 화면(`index.html`)에서 링크가 필요하면 하단에 추가.
 4. 배포 후 주소: `https://jihoon380462.github.io/csharp-lab/labs/<이름>/`.
@@ -111,7 +118,33 @@ mark(조건, "항목 이름", 상세문자열);
 | 구조가 바뀜 | ARCHITECTURE.md |
 | 다른 세션이 꼭 알아야 할 규칙 | 루트 CLAUDE.md (짧게) |
 
-## 10. 버전 올리기
+## 10. 엔진 API 케이스 추가 (`qa/api-cases.json`)
+
+데스크톱 테스트와 브라우저 QA 가 둘 다 돌린다.
+
+```json
+{ "id": "grade-예", "kind": "grade",
+  "files": [{ "name": "Solution.cs", "code": "..." }, { "name": "Tests.cs", "code": "..." }],
+  "tests": [{ "stdin": "1 2", "expect": "3" }],
+  "expect": { "status": "ok", "passed": [true], "stdouts": ["3\n"], "passedCount": 1 } }
+```
+
+| kind | 입력 필드 | expect 에 쓸 수 있는 것 |
+|---|---|---|
+| `runFiles` | `files`, `stdin` | 1절과 같음 + `errorFile`, `diagFiles` |
+| `grade` | `files`, `tests[{stdin, expect}]` | `status`, `passed`(true/false/null 배열), `stdouts`, `testStatuses`, `passedCount`, `diagLines`, `diagFiles` |
+| `check` | `files`, `mode`(console/unity) | `diagLines`, `diagFiles`, `diagIds` (오류만 봄) |
+| `unity` | `code`, `options{frames, inputScript}` | 1절과 같음 (`stdoutEquals` 에 Debug.Log 출력) |
+
+## 11. UnityLite(Unity 흉내) API 추가
+
+1. `engine/Core/Libraries/UnityLite.csx` 의 `namespace UnityEngine` 에 실제 Unity 와 **같은 이름·모양**으로 추가(학습자가 나중에 진짜 Unity 에서 그대로 쓸 수 있게). 시뮬레이터 전용이면 주석에 「시뮬레이터 전용」.
+2. 이 파일은 학습자 코드와 함께 컴파일된다 → 경고는 숨겨지지만 **오류는 학습자에게 보인다**. 이 파일만의 `using` 은 파일 안에 쓰면 학습자 코드에 영향 없음.
+3. 화면에 그릴 게 늘면 `Scene.Snapshot()`(장면 문자열) 과 `labs/unity/unity.js` 의 `parseScene`·`draw` 를 함께 고친다. 장면 문자열 모양은 REFERENCE 4절에 적혀 있으니 같이 갱신.
+4. `qa/api-cases.json` 에 `kind: "unity"` 케이스(고정 시간 + `inputScript` 로 결정적 출력) 추가.
+5. REFERENCE 5-1절 지원 API 표 갱신.
+
+## 12. 버전 올리기
 
 - `engine/Core/Engine.cs` `EngineVersion` 과 `engine/wwwroot/index.html` 의 `<span id="ver">` 를 **같이**.
 - 기능 추가 0.x.0, 수정·문서 0.x.y.

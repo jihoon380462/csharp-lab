@@ -30,6 +30,12 @@
 | 로딩 용량 절감 14.3MB → 8.4MB (gzip) | `CsEngine.csproj` (트리밍 + 루트 지정), `LabRefs.props` (참조 어셈블리 12개만) | 표준 라이브러리 확인 케이스 (bcl-coverage) | 0.2.0 |
 | brotli 압축 자동 사용 (브라우저가 지원하면, 6.6MB) | `core/engine-worker.js` | 지원 안 하는 브라우저는 gzip으로 자동 대체 | 0.2.0 |
 | 데스크톱 .NET 에서 엔진 직접 사용 (`Engine.RunAsync` → `RunResult`) | `engine/Core/*.cs` + `LabRefs.props` | `tests/EngineTests` 가 이 방식으로 케이스 전부 실행 (CI) | 0.2.1 |
+| 여러 파일 컴파일·실행 (`runFiles`) — 진단·실행 오류에 파일 이름 | `Core/Engine.cs` (RunFilesAsync), `core/cs-engine.js` | api-cases `runfiles-*` 3개 (두 번째 파일 오류 줄·파일까지) | 0.3.0 |
+| 일괄 채점 (`grade`) — 컴파일 1번, 테스트마다 새로 올려 실행(정적 변수 초기화), 출력 비교 | `Core/Engine.cs` (GradeAsync, NormalizeOutput) | api-cases `grade-*` 4개, 실험 페이지 3문제 정답 전부 통과·처음 코드 일부 실패 | 0.3.0 |
+| 진단만 (`check`) — 실행 없이 오류·경고, 실행 중에도 응답 | `Core/Engine.cs` (Check), `core/engine-worker.js` (대기열 우회) | api-cases `check-*` 3개, PC 약 15ms | 0.3.0 |
+| 코드 편집기 — 문법 색칠·오류 밑줄·줄 번호 표시·자동 들여쓰기·`{}` 펼침 (라이브러리 없음) | `core/code-editor.js` | 밑줄 위치 오차 0px, 입력 중 밑줄·고치면 사라짐, 블록 펼침 | 0.3.0 |
+| 폰 기호 칩 (짝 기호·커서 가운데·키보드 유지, 마우스 기기면 숨김) | `core/symbol-bar.js` | 모바일 QA: `( )`·`" "` 넣기·커서 위치·포커스 유지 | 0.3.0 |
+| Unity 모드 (UnityLite): MonoBehaviour·Start·Update·Transform·Input·Time·Debug·Vector·Mathf·Random·생성/파괴 | `Core/Libraries/UnityLite.csx`, `Core/Engine.cs` (RunUnityAsync), `labs/unity/` | api-cases `unity-*` 7개(이동·생성/파괴·오류 줄·프레임 시간 초과), 실시간 60fps·화면 버튼·키보드·중지, 예제 5개 | 0.3.0 |
 
 ### 재사용 방법 (다른 페이지에서) — 자세한 건 docs/REFERENCE.md 2·3절
 
@@ -49,6 +55,8 @@ const r = await engine.run('Console.WriteLine("hi");', /* 입력값 */ "");
 engine.stop(); // 실행 중지
 ```
 
+채점·진단·Unity·편집기 사용법은 docs/REFERENCE.md 2절, 아카데미 연결 설계는 docs/ACADEMY.md.
+
 **계약**: `createCsEngine` 와 결과 모양(docs/REFERENCE.md 4절)은 아카데미가 의존한다. 바꿔야 하면 `core/v2/` 새 경로로 내고 기존 경로는 남긴다.
 
 ### 알려진 제약
@@ -61,13 +69,16 @@ engine.stop(); // 실행 중지
 
 ## 🧪 실험 중
 
-(없음)
+| 실험 | 페이지 | 상태 |
+|---|---|---|
+| 채점 화면 (테스트별 표·숨은 테스트) | `labs/grading/` | 엔진 API 는 ✅, 화면은 아카데미용 시제품 |
+| Unity 시뮬레이터 화면 (캔버스·화면 키·콘솔) | `labs/unity/` | 엔진(Unity 모드)은 ✅, 화면은 시제품 |
 
 ## 💡 실험 후보
 
-- 실행 중 대화형 입력 (Console.ReadLine이 화면에서 입력을 기다림)
-- 입력하면서 바로 오류 밑줄 표시 (실행 버튼 없이)
-- 문법 색칠(구문 강조) 편집기
+- 정답 검사 도구 `tools/SolutionRunner` (아카데미 CI 용, docs/ACADEMY.md 5절)
+- 구조 검사 채점 (「for 를 썼는가」 등 문법 트리 조건)
+- 실행 중 대화형 입력 (Console.ReadLine 이 화면에서 입력을 기다림)
 - 자동 완성 (멤버 목록)
-- 채점: 예상 출력 비교 / 테스트 코드로 정답 판정
 - 변수 값 추적·한 줄씩 실행 시각화
+- Unity 모드: 충돌(간단한 원·사각 겹침), 코루틴(`StartCoroutine`), 텍스트 UI

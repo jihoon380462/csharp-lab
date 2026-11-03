@@ -53,7 +53,25 @@
 - `Emulation.setCPUThrottlingRate`, `Network.emulateNetworkConditions` 는 Worker 세션에서 "Not supported". 페이지 수준 네트워크 제한은 Worker 의 fetch 에도 일부 적용되는 것으로 보였음.
 - → 폰 성능 수치는 **실제 기기에서** 확인한다(v0.1 실측: 폰 첫 방문 약 6초).
 
-### 13. 기타
+### 13. MSBuild 가 `이름.cs.txt` 리소스를 체코어(cs) 위성 리소스로 만든다
+- **증상**: `GetManifestResourceStream("lib.UnityLite.cs")` 가 null (엔진 리소스 없음).
+- **원인**: `AssignCulture` 가 끝에서 두 번째 확장자 `.cs` 를 문화권 이름(체코어)으로 보고 `cs/` 위성 어셈블리로 보냄.
+- **해결**: 확장자를 `.csx` 로 바꾸고 `<WithCulture>false</WithCulture>`, `LogicalName` 을 직접 지정. → `engine/LabRefs.props`
+
+### 14. 겹침 편집기가 납작해지거나 글자와 밑줄이 어긋난다
+- 편집기 CSS 가 `<style>` 로 나중에 들어가서 host 요소의 같은 우선순위 규칙(예: `height`)을 덮어썼다 → 편집기 CSS 에는 높이를 두지 않고 host 가 정한다.
+- textarea 와 layer 의 글꼴·크기·줄 높이·padding·`tab-size`·`white-space` 가 하나라도 다르면 어긋난다. 페이지 CSS 가 `#code` 같은 id 로 textarea 만 바꾸면 깨짐(실험실 v0.2 의 `#code` 규칙을 지운 이유). QA 「겹침 정렬」이 픽셀 차이를 잰다.
+
+### 15. 실행 중 출력이 늦게(또는 끝날 때까지) 안 보인다
+- 0.1초 간격으로만 보내면 「한 번 출력하고 오래 계산」하는 코드의 첫 줄이 끝까지 안 보인다 → 첫 출력은 바로 보내고, `Flush()` 도 전송으로. Unity 모드는 프레임마다 `Console.Out.Flush()`.
+
+### 16. Unity 모드 자동 생성에 `MonoBehaviour` 자체가 끼어든다
+- `typeof(MonoBehaviour).IsAssignableFrom(t)` 는 자기 자신도 참 → `t.IsSubclassOf(...)` + `t.Namespace != "UnityEngine"`. 케이스 `unity-autospawn-count` 로 확인.
+
+### 17. 키를 아주 짧게 눌렀다 떼면 Unity 입력이 안 먹을 수 있다
+- 입력은 프레임마다(약 16ms) 읽는다. 누름과 뗌이 같은 프레임 사이에 다 지나가면 그 프레임엔 안 눌린 것으로 보인다(자동 검사에서 keyDown/keyUp 사이에 150ms 를 둔 이유). 실제 사람 손으로는 거의 생기지 않음. 확실히 하려면 「이번 프레임 사이에 눌렸던 키」를 따로 모아 보내는 방식으로 바꿀 수 있다(후보).
+
+### 기타
 - Roslyn `concurrentBuild: true` 는 단일 스레드에서 의미 없음 → `false`.
 - 학습자 코드 출력이 무한하면 메모리가 터진다 → Writer 에 상한(10만 자) 두고 넘으면 예외.
 - `catch (Exception)` 으로 감시 예외를 삼키는 코드 → 감시기를 "한번 걸리면 계속 던지는" 상태로.
