@@ -340,7 +340,9 @@ async function play() {
   out.innerHTML = "";
   setBtn("stop");
   setStatus("실행 중", "busy");
-  canvas.focus();
+  canvas.focus({ preventScroll: true });
+  // 폰(한 줄 배치)에서는 게임 화면이 아래에 있으므로 실행하면 게임 화면으로 스크롤
+  if (window.matchMedia("(max-width: 899px)").matches) document.querySelector(".out-panel").scrollIntoView({ behavior: "smooth", block: "start" });
   pressed.clear(); pushInput();
   const r = await engine.runUnity(editor.value, { live: true });
   lab.lastResult = r;

@@ -247,9 +247,9 @@ async function newPage(errors, tag) {
     await page.key("Enter", "Enter", 13);
     const blk = await page.eval(() => document.getElementById("code").value);
     mark(blk === "if (true) {\n    \n}", "{} 사이 Enter → 블록 펼침", JSON.stringify(blk));
-    await page.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "hover" }, { name: "pointer", value: "fine" }] });
-    const barHidden = await page.eval(() => getComputedStyle(document.getElementById("symbar")).display);
-    mark(barHidden === "none", "PC(마우스)에서는 기호 칩 숨김", barHidden);
+    // 헤드리스 크롬은 마우스 장치가 없어 (hover:hover) 가 거짓일 수 있음 → CSS 규칙이 맞게 적용되는지로 확인
+    const bar = await page.eval(() => ({ mouse: matchMedia("(hover:hover) and (pointer:fine)").matches, display: getComputedStyle(document.getElementById("symbar")).display }));
+    mark(bar.mouse ? bar.display === "none" : bar.display !== "none", "기호 칩: 마우스 기기면 숨김, 터치면 보임 (CSS 규칙)", JSON.stringify(bar));
     await page.close();
 
     // ── 채점 실험 페이지 ──
@@ -380,7 +380,6 @@ async function newPage(errors, tag) {
     mark(ov <= 0, "모바일 가로 넘침 없음", `${ov}px`);
     const runVisible = await page.eval(() => { const r = document.getElementById("runBtn").getBoundingClientRect(); return r.width > 300 && r.height >= 44; });
     mark(runVisible, "모바일 실행 버튼 크기(터치)");
-    await page.send("Emulation.setEmulatedMedia", { features: [{ name: "hover", value: "none" }, { name: "pointer", value: "coarse" }] });
     // 폰 기호 칩: 보이고, ( ) 를 누르면 () 넣고 커서는 가운데
     const chip = await page.eval(() => {
       const bar = document.getElementById("symbar");

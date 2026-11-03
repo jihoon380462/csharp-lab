@@ -36,3 +36,7 @@ a.logo { text-decoration: none; }
 .keypad .k-space { grid-column: 5; grid-row: 1 / span 2; font-size: 14px; }
 .keypad .k-hint { grid-column: 4; grid-row: 1 / span 2; align-self: center; font-size: 12px; color: var(--muted); padding: 0 8px; }
 .console { max-height: 200px; }
+@media (max-width: 600px) {
+  .keypad { grid-template-columns: repeat(3, 52px) 1fr 96px; }
+  .keypad .k-hint { display: none; }
+}

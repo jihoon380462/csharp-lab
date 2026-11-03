@@ -1,4 +1,4 @@
-// 가벼운 C# 코드 편집기 (외부 라이브러리 없음).
+// 가벼운 C# 코드 편집기 (외부 라이브러리 없음). 높이는 host 요소에 정해 둘 것 (예: .editor { height: 280px }).
 // <textarea>(글자 투명) 뒤에 색칠한 <pre>와 오류 밑줄 <pre>를 같은 자리에 겹쳐 그린다.
 //
 //   import { createCodeEditor } from "/csharp-lab/core/code-editor.js";
@@ -12,7 +12,7 @@
 // 키: Tab = 공백 4칸(선택 영역이면 줄마다), Shift+Tab = 내어쓰기, Enter = 들여쓰기 유지({ 뒤면 한 칸 더, {|} 사이면 블록으로 펼침)
 
 const CSS = `
-.cse{position:relative;display:flex;height:100%;min-height:0;background:var(--cse-bg,#120f18);font-family:var(--cse-font,"D2Coding","Cascadia Code",Consolas,"SF Mono",ui-monospace,Menlo,monospace);font-size:var(--cse-size,14px);line-height:var(--cse-lh,21px)}
+.cse{position:relative;display:flex;color-scheme:dark;background:var(--cse-bg,#120f18);font-family:var(--cse-font,"D2Coding","Cascadia Code",Consolas,"SF Mono",ui-monospace,Menlo,monospace);font-size:var(--cse-size,14px);line-height:var(--cse-lh,21px)}
 .cse-gutter{flex:none;width:44px;margin:0;padding:12px 8px 12px 0;text-align:right;color:var(--cse-gutter,#5d5470);background:var(--cse-gutter-bg,#17131f);border-right:1px solid var(--cse-line,#352e45);overflow:hidden;user-select:none;font:inherit;white-space:pre}
 .cse-gutter .e{color:#ff7a85;font-weight:700}
 .cse-gutter .w{color:#f4c25b}
