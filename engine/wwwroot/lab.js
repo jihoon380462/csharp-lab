@@ -205,7 +205,7 @@
       const boot = await (await fetch("_framework/blazor.boot.json", { cache: "no-cache" })).json();
       const res = boot.resources || {};
       let n = 0;
-      for (const k of ["assembly", "runtime", "wasmNative", "jsModuleRuntime", "jsModuleNative", "satelliteResources"]) {
+      for (const k of ["assembly", "runtime", "icu", "wasmNative", "jsModuleRuntime", "jsModuleNative", "satelliteResources"]) {
         const v = res[k];
         if (!v) continue;
         if (k === "satelliteResources") { for (const c of Object.values(v)) n += Object.keys(c).length; }
@@ -235,12 +235,16 @@
       return;
     }
     // 컴파일 오류 메시지를 한국어로: Roslyn 한국어 리소스 불러오기 (실패해도 영어로 동작)
-    try {
-      const rt = (Blazor.runtime && Blazor.runtime.INTERNAL) || (globalThis.getDotnetRuntime && getDotnetRuntime(0).INTERNAL);
-      if (rt && rt.loadSatelliteAssemblies) await rt.loadSatelliteAssemblies(["ko"]);
-    } catch (e) { console.warn("한국어 리소스 로딩 실패", e); }
+    const diagnose = async () => { try { return await DotNet.invokeMethodAsync("CsEngine", "Diagnose"); } catch (e) { return String(e); } };
+    lab.diag = await diagnose();
+    if (!/ko=.*[가-힣]/.test(lab.diag)) {
+      try {
+        const rt = (Blazor.runtime && Blazor.runtime.INTERNAL) || (globalThis.getDotnetRuntime && getDotnetRuntime(0).INTERNAL);
+        if (rt && rt.loadSatelliteAssemblies) await rt.loadSatelliteAssemblies(["ko"]);
+      } catch (e) { console.warn("한국어 리소스 로딩 실패", e); }
+      lab.diag = "[after load] " + (await diagnose());
+    }
     lab.loadMs = performance.now() - t0;
-    try { lab.diag = await DotNet.invokeMethodAsync("CsEngine", "Diagnose"); } catch (e) { lab.diag = String(e); }
     $("mLoad").textContent = fmtMs(lab.loadMs);
     $("ver").textContent = "v" + (await DotNet.invokeMethodAsync("CsEngine", "GetVersion"));
 

@@ -10,9 +10,9 @@
          (트리밍하면 컴파일은 되는데 실행 중 MissingMethodException이 날 수 있음) -->
     <PublishTrimmed>false</PublishTrimmed>
 
-    <!-- ICU(국제화 데이터) 제외로 용량 절감. 한글 문자열 자체는 문제없음 -->
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
+    <!-- 한국어 문화권(ko) 사용: 한국어 오류 메시지 리소스를 쓰려면 Invariant 모드를 끄고
+         ICU는 필요한 조각(CJK)만 받는다 -->
+    <InvariantGlobalization>false</InvariantGlobalization>
     <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
 
     <!-- Roslyn 한국어 에러 메시지만 포함 -->
