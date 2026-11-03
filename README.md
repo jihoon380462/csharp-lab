@@ -12,9 +12,10 @@ C# 관련 개발의 기준 저장소로, 검증이 끝난 기능은 [FEATURES.md
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | 다른 세션이 처음 읽는 안내 (작업 규칙 포함) |
 | [FEATURES.md](FEATURES.md) | ✅ 검증된 기능 / 🧪 실험 중 / 💡 후보 |
-| [docs/MANUAL.md](docs/MANUAL.md) | 사용 설명서 — 웹·데스크톱에서 엔진 쓰기, 결과 형식(계약), 제한 |
+| 🔎 [docs/REFERENCE.md](docs/REFERENCE.md) | **찾아볼 때** — 위치 색인, API, 결과 형식(계약), 지원 범위, 제한값 |
+| ➕ [docs/ADD.md](docs/ADD.md) | **추가할 때** — 기능·케이스·라이브러리·예제 추가 절차와 체크리스트 |
+| 🔧 [docs/MAINTAIN.md](docs/MAINTAIN.md) | **유지보수할 때** — 수정→QA→배포, 증상별 진단표, 업그레이드, 되돌리기 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 구조와 실행 흐름, 파일별 역할 |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | 빌드·QA·배포 절차, 작업 환경 제약, 케이스·라이브러리 추가 |
 | [docs/PITFALLS.md](docs/PITFALLS.md) | 브라우저에서 .NET/Roslyn 돌릴 때의 함정과 해결 |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | 버전별 변경 |
 

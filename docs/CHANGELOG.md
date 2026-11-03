@@ -3,7 +3,7 @@
 ## v0.2.1 — 2026-11-03
 - 저장소 정리: 엔진 소스를 `engine/Core/`(플랫폼 무관: Engine·GuardRewriter·RunResult·CappedWriter)와 `engine/Browser/`(JSExport·Main)로 분리.
 - 데스크톱용 타입 API `Engine.RunAsync(code, stdin) → RunResult`, `Engine.ToJson` 추가 (기존 `Run` 은 그대로 JSON 문자열).
-- 문서: `CLAUDE.md`(다른 세션 첫 안내), `docs/MANUAL.md`·`ARCHITECTURE.md`·`DEVELOPMENT.md`·`PITFALLS.md`.
+- 문서(목적별): `CLAUDE.md`(다른 세션 첫 안내), `docs/README.md`(안내) · 🔎 `REFERENCE.md`(찾아볼 때) · ➕ `ADD.md`(추가할 때) · 🔧 `MAINTAIN.md`(유지보수할 때) · `ARCHITECTURE.md` · `PITFALLS.md`.
 - 브라우저 QA 스크립트를 저장소로(`qa/browser/`), 도구 `tools/ship.sh`·`fetch-build.sh`·`deploy.sh`, 실험 자리 `engine/wwwroot/labs/`.
 
 ## v0.2.0 — 2026-11-03

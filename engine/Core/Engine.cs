@@ -17,7 +17,7 @@ namespace CsEngine;
 /// <summary>
 /// C# 코드를 컴파일(Roslyn)하고 같은 프로세스 안에서 실행하는 엔진.
 /// Core 폴더는 플랫폼과 무관하다: 브라우저에서는 Browser/Exports.cs(JSExport)가 Web Worker 안에서 부르고,
-/// 데스크톱 .NET(tests/EngineTests 등)에서는 Engine.Run 을 직접 부른다. 사용법은 docs/MANUAL.md.
+/// 데스크톱 .NET(tests/EngineTests 등)에서는 Engine.RunAsync 를 직접 부른다. 사용법은 docs/REFERENCE.md 3절.
 /// </summary>
 public static class Engine
 {

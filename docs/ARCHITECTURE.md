@@ -66,7 +66,7 @@
 ## 3. 실행 한 번의 흐름 (Engine.RunAsync)
 
 1. 빈 코드(주석·using 만)면 바로 `ok`.
-2. 코드 끝에 `#pragma checksum` 한 줄을 붙여 파싱(줄 번호 안 바뀜, 이유는 PITFALLS 6).
+2. 코드 끝에 `#pragma checksum` 한 줄을 붙여 파싱(줄 번호 안 바뀜, 배경은 PITFALLS 3).
 3. **원본 트리**로 컴파일 → 진단(오류·경고) 수집. 오류가 있으면 `compile-error` 로 끝. 줄 번호는 원본 기준.
 4. `GuardRewriter` 로 감시 코드를 넣은 트리 + `__LabGuard` 클래스로 다시 컴파일 → `Emit`(PE + Portable PDB).
 5. `Assembly.Load(pe, pdb)` → 감시 마감 시각·재귀 상한 설정.

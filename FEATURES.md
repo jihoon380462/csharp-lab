@@ -31,7 +31,7 @@
 | brotli 압축 자동 사용 (브라우저가 지원하면, 6.6MB) | `core/engine-worker.js` | 지원 안 하는 브라우저는 gzip으로 자동 대체 | 0.2.0 |
 | 데스크톱 .NET 에서 엔진 직접 사용 (`Engine.RunAsync` → `RunResult`) | `engine/Core/*.cs` + `LabRefs.props` | `tests/EngineTests` 가 이 방식으로 케이스 전부 실행 (CI) | 0.2.1 |
 
-### 재사용 방법 (다른 페이지에서) — 자세한 건 docs/MANUAL.md
+### 재사용 방법 (다른 페이지에서) — 자세한 건 docs/REFERENCE.md 2·3절
 
 같은 GitHub Pages 주소(`jihoon380462.github.io`) 아래라면 엔진을 그대로 불러 쓸 수 있습니다.
 
@@ -49,7 +49,7 @@ const r = await engine.run('Console.WriteLine("hi");', /* 입력값 */ "");
 engine.stop(); // 실행 중지
 ```
 
-**계약**: `createCsEngine` 와 결과 모양(docs/MANUAL.md 4절)은 아카데미가 의존한다. 바꿔야 하면 `core/v2/` 새 경로로 내고 기존 경로는 남긴다.
+**계약**: `createCsEngine` 와 결과 모양(docs/REFERENCE.md 4절)은 아카데미가 의존한다. 바꿔야 하면 `core/v2/` 새 경로로 내고 기존 경로는 남긴다.
 
 ### 알려진 제약
 
