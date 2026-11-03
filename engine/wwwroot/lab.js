@@ -1,12 +1,13 @@
-(() => {
-  "use strict";
+// C# 실험실 화면. 엔진은 core/cs-engine.js(백그라운드 Web Worker)를 사용한다.
+import { createCsEngine } from "./core/cs-engine.js";
 
+{
   const $ = (id) => document.getElementById(id);
   const codeEl = $("code"), gutterEl = $("gutter"), stdinEl = $("stdin");
   const runBtn = $("runBtn"), runLabel = $("runLabel");
   const outputEl = $("output"), statusEl = $("status");
 
-  const lab = (window.__lab = { ready: false, bytes: 0, loaded: 0, total: 0, loadMs: 0, warmMs: 0, lastResult: null });
+  const lab = (window.__lab = { ready: false, warm: false, bytes: 0, loadMs: 0, warmMs: 0, lastResult: null, restarts: 0 });
   const t0 = performance.now();
 
   // ───────── 편집기 ─────────
@@ -88,6 +89,15 @@
 
   function render(r) {
     let html = "";
+    if (r.status === "stopped-by-user") {
+      if (liveText) html += `<pre class="stdout">${esc(liveText)}</pre>`;
+      html += `<div class="box warn"><b>실행 중지</b><p>■ 중지 버튼으로 멈췄습니다. 엔진을 다시 준비하는 동안 잠시 기다려 주세요.</p></div>`;
+      outputEl.innerHTML = html;
+      $("mCompile").textContent = "-";
+      $("mRun").textContent = fmtMs(r.runMs);
+      setStatus("직접 중지함", "warn");
+      return;
+    }
     if (r.stdout) html += `<pre class="stdout">${esc(r.stdout)}</pre>`;
     if (r.outputTruncated) html += `<p class="note">… 출력이 너무 길어 잘렸습니다.</p>`;
 
@@ -117,160 +127,105 @@
 
     $("mCompile").textContent = fmtMs(r.compileMs);
     $("mRun").textContent = r.status === "compile-error" ? "-" : fmtMs(r.runMs);
-    const label = { ok: ["성공", "ok"], "compile-error": ["컴파일 오류", "bad"], "runtime-error": ["실행 오류", "bad"], stopped: ["중단됨", "warn"], "internal-error": ["엔진 오류", "bad"] }[r.status] || [r.status, ""];
+    const label = { ok: ["성공", "ok"], "compile-error": ["컴파일 오류", "bad"], "runtime-error": ["실행 오류", "bad"], stopped: ["중단됨", "warn"], "stopped-by-user": ["직접 중지함", "warn"], "internal-error": ["엔진 오류", "bad"] }[r.status] || [r.status, ""];
     setStatus(label[0], label[1]);
   }
 
-  // ───────── 실행 ─────────
-  let running = false;
+  // ───────── 실행 / 중지 ─────────
+  let running = false, liveText = "", livePre = null, tickTimer = 0;
+
+  function setRunButton(mode) {
+    // mode: wait(엔진 준비 중) | run | stop
+    runBtn.classList.toggle("stop", mode === "stop");
+    runBtn.disabled = mode === "wait";
+    runBtn.querySelector(".run-icon").textContent = mode === "stop" ? "■" : "▶";
+    runLabel.textContent = mode === "stop" ? "중지" : mode === "wait" ? "엔진 준비 중…" : "실행";
+  }
+
   async function run() {
-    if (!lab.ready || running) return;
+    if (running) { engine.stop(); return; }
+    if (engine.state === "loading" || engine.state === "restarting" || engine.state === "failed") return;
     running = true;
-    runBtn.disabled = true;
-    runLabel.textContent = "실행 중…";
-    setStatus("실행 중…", "busy");
-    outputEl.classList.add("dim");
-    // 버튼 상태가 화면에 그려진 뒤 실행 (엔진이 메인 스레드를 잠깐 점유함)
-    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-    try {
-      const json = await DotNet.invokeMethodAsync("CsEngine", "Run", codeEl.value, stdinEl.value);
-      const r = JSON.parse(json);
-      lab.lastResult = r;
-      render(r);
-      // 한 줄 배치(휴대폰)에서는 결과가 화면 아래에 있으므로 결과로 스크롤
-      if (window.matchMedia("(max-width: 899px)").matches) {
-        document.querySelector(".out-panel").scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    } catch (err) {
-      lab.lastResult = { status: "js-error", message: String(err) };
-      outputEl.innerHTML = `<div class="box error"><b>엔진 호출 실패</b><p class="raw">${esc(String(err))}</p></div>`;
-      setStatus("엔진 오류", "bad");
-    } finally {
-      outputEl.classList.remove("dim");
-      running = false;
-      runBtn.disabled = false;
-      runLabel.textContent = "실행";
+    liveText = "";
+    outputEl.innerHTML = `<pre class="stdout live"></pre>`;
+    livePre = outputEl.firstChild;
+    setRunButton("stop");
+    const started = performance.now();
+    const tick = () => {
+      const s = (performance.now() - started) / 1000;
+      setStatus(lab.warm ? `실행 중… ${s.toFixed(1)}초` : `컴파일러 예열 기다리는 중… ${s.toFixed(1)}초`, "busy");
+    };
+    tick();
+    tickTimer = setInterval(tick, 100);
+    const r = await engine.run(codeEl.value, stdinEl.value);
+    clearInterval(tickTimer);
+    lab.lastResult = r;
+    running = false;
+    livePre = null;
+    render(r);
+    if (engine.state === "ready") setRunButton("run"); else setRunButton("wait");
+    if (window.matchMedia("(max-width: 899px)").matches) {
+      document.querySelector(".out-panel").scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
   runBtn.addEventListener("click", run);
 
-  // ───────── 엔진 로딩 (gzip 압축본을 받아 브라우저에서 풀기) ─────────
-  const canGunzip = typeof DecompressionStream === "function";
-  const barFill = $("barFill"), loaderPct = $("loaderPct"), loaderText = $("loaderText");
+  // ───────── 엔진 ─────────
+  const barFill = $("barFill"), loaderPct = $("loaderPct"), loaderText = $("loaderText"), loader = $("loader");
 
-  function progress() {
-    // 용량 기준 진행률 (빌드 때 기록한 전체 용량), 없으면 파일 개수 기준
-    const byBytes = lab.expectedBytes ? lab.bytes / lab.expectedBytes : 0;
-    const byCount = lab.total ? lab.loaded / lab.total : 0;
-    const pct = Math.min(99, Math.floor(Math.max(byBytes, byCount) * 100));
-    barFill.style.width = pct + "%";
-    loaderPct.textContent = pct + "%";
-    loaderText.textContent = `엔진 내려받는 중… ${fmtMB(lab.bytes)}`;
-    $("mBytes").textContent = fmtMB(lab.bytes);
-  }
-
-  async function countingFetch(url, type) {
-    const res = await fetch(url, { cache: "no-cache" });
-    if (!res.ok) throw new Error(res.status + " " + url);
-    const reader = res.body.getReader();
-    const counted = new ReadableStream({
-      async pull(ctrl) {
-        const { done, value } = await reader.read();
-        if (done) { ctrl.close(); return; }
-        lab.bytes += value.byteLength;
-        progress();
-        ctrl.enqueue(value);
-      },
-    });
-    return counted;
-  }
-
-  async function loadResource(type, defaultUri) {
-    const ctype = type === "dotnetwasm" || defaultUri.endsWith(".wasm") ? "application/wasm" : "application/octet-stream";
-    try {
-      let body;
-      if (canGunzip) {
-        try {
-          body = (await countingFetch(defaultUri + ".gz", type)).pipeThrough(new DecompressionStream("gzip"));
-        } catch {
-          body = await countingFetch(defaultUri, type);
-        }
-      } else {
-        body = await countingFetch(defaultUri, type);
+  const engine = (lab.engine = createCsEngine({
+    onProgress(p) {
+      const pct = Math.floor(p.ratio * 100);
+      barFill.style.width = pct + "%";
+      loaderPct.textContent = pct + "%";
+      loaderText.textContent = `엔진 내려받는 중… ${fmtMB(p.bytes)}`;
+      lab.bytes = p.bytes;
+      $("mBytes").textContent = fmtMB(p.bytes) + (p.enc ? ` (${p.enc})` : "");
+    },
+    onReady(info) {
+      lab.loadMs = info.loadMs;
+      lab.diag = info.diag;
+      lab.enc = info.enc;
+      lab.ready = true;
+      $("ver").textContent = "v" + info.version;
+      $("mLoad").textContent = fmtMs(info.loadMs);
+      barFill.style.width = "100%";
+      loaderPct.textContent = "100%";
+      loader.classList.add("done");
+      loader.classList.remove("failed");
+      loaderText.textContent = lab.warm ? `준비 완료 · ${fmtMs(info.loadMs)}` : `준비 완료 · ${fmtMs(info.loadMs)} (컴파일러 예열은 뒤에서 진행)`;
+      if (!running) setRunButton("run");
+    },
+    onWarm(ms) {
+      lab.warm = true;
+      lab.warmMs = ms;
+      $("mWarm").textContent = fmtMs(ms);
+      loaderText.textContent = `준비 완료 · 로딩 ${fmtMs(lab.loadMs)} + 예열 ${fmtMs(ms)}`;
+    },
+    onOutput(chunk) {
+      liveText += chunk;
+      if (livePre) {
+        livePre.textContent = liveText.length > 20000 ? "…" + liveText.slice(-20000) : liveText;
+        outputEl.scrollTop = outputEl.scrollHeight;
       }
-      // 끝까지 받아서 Response로 넘김 (wasm 스트리밍 컴파일을 위해 content-type 지정)
-      const buf = await new Response(body).arrayBuffer();
-      return new Response(buf, { headers: { "content-type": ctype } });
-    } finally {
-      lab.loaded++;
-      progress();
-    }
-  }
-
-  async function countResources() {
-    try { lab.expectedBytes = (await (await fetch("lab-size.json", { cache: "no-cache" })).json()).gzBytes || 0; } catch { lab.expectedBytes = 0; }
-    try {
-      const boot = await (await fetch("_framework/blazor.boot.json", { cache: "no-cache" })).json();
-      const res = boot.resources || {};
-      let n = 0;
-      for (const k of ["assembly", "runtime", "icu", "wasmNative", "jsModuleRuntime", "jsModuleNative", "satelliteResources"]) {
-        const v = res[k];
-        if (!v) continue;
-        if (k === "satelliteResources") { for (const c of Object.values(v)) n += Object.keys(c).length; }
-        else n += Object.keys(v).length;
+    },
+    onState(s) {
+      lab.state = s;
+      if (s === "restarting") {
+        lab.restarts++;
+        lab.ready = false;
+        lab.warm = false;
+        loader.classList.remove("done");
+        loaderText.textContent = "엔진 다시 준비 중…";
+        if (!running) setRunButton("wait");
       }
-      lab.total = Math.max(n, 1);
-    } catch { lab.total = 60; }
-  }
-
-  async function boot() {
-    await countResources();
-    try {
-      await Blazor.start({
-        applicationCulture: "ko",
-        loadBootResource(type, name, defaultUri) {
-          if (type === "dotnetjs" || type === "manifest" || type === "configuration" ||
-              type === "js-module-threads" || defaultUri.endsWith(".js") || defaultUri.endsWith(".json")) {
-            return defaultUri;
-          }
-          return loadResource(type, defaultUri);
-        },
-      });
-    } catch (err) {
-      loaderText.textContent = "엔진을 불러오지 못했습니다: " + err;
-      $("loader").classList.add("failed");
-      lab.failed = String(err);
-      return;
-    }
-    // 컴파일 오류 메시지를 한국어로: Roslyn 한국어 리소스 불러오기 (실패해도 영어로 동작)
-    const diagnose = async () => { try { return await DotNet.invokeMethodAsync("CsEngine", "Diagnose"); } catch (e) { return String(e); } };
-    lab.diag = await diagnose();
-    if (!/ko=.*[가-힣]/.test(lab.diag)) {
-      try {
-        const rt = (Blazor.runtime && Blazor.runtime.INTERNAL) || (globalThis.getDotnetRuntime && getDotnetRuntime(0).INTERNAL);
-        if (rt && rt.loadSatelliteAssemblies) await rt.loadSatelliteAssemblies(["ko"]);
-      } catch (e) { console.warn("한국어 리소스 로딩 실패", e); }
-      lab.diag = "[after load] " + (await diagnose());
-    }
-    lab.loadMs = performance.now() - t0;
-    $("mLoad").textContent = fmtMs(lab.loadMs);
-    $("ver").textContent = "v" + (await DotNet.invokeMethodAsync("CsEngine", "GetVersion"));
-
-    barFill.style.width = "100%";
-    loaderPct.textContent = "100%";
-    loaderText.textContent = "컴파일러 예열 중…";
-    const w0 = performance.now();
-    await new Promise((r) => setTimeout(r, 30));
-    await DotNet.invokeMethodAsync("CsEngine", "Warmup");
-    lab.warmMs = performance.now() - w0;
-    $("mWarm").textContent = fmtMs(lab.warmMs);
-
-    loaderText.textContent = `준비 완료 · ${fmtMs(lab.loadMs + lab.warmMs)} 걸림`;
-    $("loader").classList.add("done");
-    lab.ready = true;
-    runBtn.disabled = false;
-    runLabel.textContent = "실행";
-  }
-
-  boot();
-})();
+    },
+    onError(msg) {
+      lab.failed = msg;
+      loader.classList.add("failed");
+      loaderText.textContent = "엔진을 불러오지 못했습니다: " + msg;
+      setRunButton("wait");
+    },
+  }));
+  setRunButton("wait");
+}

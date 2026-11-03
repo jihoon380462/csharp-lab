@@ -13,7 +13,7 @@
       <span class="logo">C#</span>
       <div>
         <h1>C# 실험실</h1>
-        <p class="sub">브라우저 실행 엔진 테스트 · <span id="ver">v0.1.0</span></p>
+        <p class="sub">브라우저 실행 엔진 테스트 · <span id="ver">v0.2.0</span></p>
       </div>
     </div>
   </header>
@@ -65,11 +65,10 @@
   </main>
 
   <footer class="foot">
-    실행 제한: 5초 · 재귀 2,000단계 · 출력 10만 자. 모든 코드는 이 브라우저 안에서만 실행됩니다.
+    자동 중단: 10초 · 재귀 2,000단계 · 출력 10만 자 (언제든 ■ 중지 가능). 모든 코드는 이 브라우저 안에서만 실행됩니다.
   </footer>
 
-  <script src="_framework/blazor.webassembly.js" autostart="false"></script>
   <script src="examples.js"></script>
-  <script src="lab.js"></script>
+  <script type="module" src="lab.js"></script>
 </body>
 </html>

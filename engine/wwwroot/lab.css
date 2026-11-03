@@ -126,3 +126,7 @@ button.line {
 /* 3칸 배치에서 남는 빈 칸 채우기 */
 .metrics::after { content: ""; background: var(--panel); }
 @media (min-width: 520px) { .metrics::after { display: none; } }
+/* 실행 중 → 중지 버튼 */
+.run.stop { background: linear-gradient(135deg, #e0607a, #b23a55); }
+.run.stop:disabled { opacity: .55; }
+.stdout.live:empty::before { content: "…"; color: var(--muted); }
