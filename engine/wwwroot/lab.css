@@ -123,3 +123,6 @@ button.line {
 .metrics b { font-size: 14px; font-variant-numeric: tabular-nums; }
 
 .foot { max-width: 1200px; margin: 14px auto 0; font-size: 12px; color: var(--muted); text-align: center; }
+/* 3칸 배치에서 남는 빈 칸 채우기 */
+.metrics::after { content: ""; background: var(--panel); }
+@media (min-width: 520px) { .metrics::after { display: none; } }
