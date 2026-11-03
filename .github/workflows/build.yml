@@ -1,0 +1,70 @@
+name: build
+
+# main에 push하면 빌드 + 엔진 테스트만 한다. (배포는 QA 후 deploy 워크플로를 수동 실행)
+# 빌드 결과물은 build-output 브랜치에 저장되어 QA와 배포에 그대로 쓰인다.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: 엔진 테스트 (데스크톱 .NET)
+        id: tests
+        continue-on-error: true
+        run: dotnet run --project tests/EngineTests -c Release -- qa/cases.json 2>&1 | tee test-result.txt; exit ${PIPESTATUS[0]}
+
+      - name: 브라우저용 빌드 (Blazor WebAssembly)
+        run: dotnet publish engine/CsEngine.csproj -c Release -o out
+
+      - name: 결과물 정리
+        run: |
+          site=out/wwwroot
+          touch "$site/.nojekyll"
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "tests: ${{ steps.tests.outcome }}"
+            echo
+            echo "## 원본 크기 (_framework)"
+            du -sh "$site/_framework"
+            echo
+            echo "## gzip 전송 크기 합계 (*.gz)"
+            find "$site/_framework" -name '*.gz' -printf '%s\n' | awk '{s+=$1} END {printf "%.1f MB\n", s/1048576}'
+            echo
+            echo "## 큰 파일 상위 15개 (gzip 기준)"
+            find "$site/_framework" -name '*.gz' -printf '%s %p\n' | sort -rn | head -15 | awk '{printf "%7.2f MB  %s\n", $1/1048576, $2}'
+          } > "$site/BUILD_INFO.txt"
+          cp test-result.txt "$site/TEST_RESULT.txt" || true
+          cat "$site/BUILD_INFO.txt"
+
+      - name: build-output 브랜치에 저장
+        run: |
+          cd out/wwwroot
+          git init -q -b build-output
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "build ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" build-output
+
+      - name: 테스트 실패 시 표시
+        if: steps.tests.outcome == 'failure'
+        run: |
+          echo "::warning::엔진 테스트 실패 - TEST_RESULT.txt 확인"
+          grep -E '^(FAIL|[0-9]+ passed)' test-result.txt || true

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>CsEngine</AssemblyName>
+
+    <!-- 학습자 코드가 어떤 표준 라이브러리 API를 부를지 모르므로 트리밍하지 않는다.
+         (트리밍하면 컴파일은 되는데 실행 중 MissingMethodException이 날 수 있음) -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- ICU(국제화 데이터) 제외로 용량 절감. 한글 문자열 자체는 문제없음 -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
+    <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
+
+    <!-- Roslyn 한국어 에러 메시지만 포함 -->
+    <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>
+
+    <!-- 압축본(.br/.gz)은 로더에서 직접 사용 -->
+    <CompressionEnabled>true</CompressionEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.*" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.*" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 엔진 로직(컴파일·보호 코드·실행)을 데스크톱 .NET에서 빠르게 검사하는 테스트 -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../engine/Engine.cs" Link="Engine.cs" />
+    <Compile Include="../../engine/GuardRewriter.cs" Link="GuardRewriter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.JSInterop" Version="8.0.*" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.*" />
+  </ItemGroup>
+</Project>
