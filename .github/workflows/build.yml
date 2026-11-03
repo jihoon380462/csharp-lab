@@ -36,6 +36,9 @@ jobs:
         run: |
           site=out/wwwroot
           touch "$site/.nojekyll"
+          # 로딩 진행률 계산용: 실제로 받는 파일(gz) 용량 합계 (다른 언어용 ICU 조각 제외)
+          gz=$(find "$site/_framework" -name '*.gz' ! -name '*.js.gz' ! -name '*.json.gz' ! -name 'icudt_EFIGS*' ! -name 'icudt_no_CJK*' -printf '%s\n' | awk '{s+=$1} END {print s+0}')
+          echo "{\"gzBytes\": $gz}" > "$site/lab-size.json"
           {
             echo "commit: $GITHUB_SHA"
             echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

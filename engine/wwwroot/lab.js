@@ -137,6 +137,10 @@
       const r = JSON.parse(json);
       lab.lastResult = r;
       render(r);
+      // 한 줄 배치(휴대폰)에서는 결과가 화면 아래에 있으므로 결과로 스크롤
+      if (window.matchMedia("(max-width: 899px)").matches) {
+        document.querySelector(".out-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } catch (err) {
       lab.lastResult = { status: "js-error", message: String(err) };
       outputEl.innerHTML = `<div class="box error"><b>엔진 호출 실패</b><p class="raw">${esc(String(err))}</p></div>`;
@@ -155,7 +159,10 @@
   const barFill = $("barFill"), loaderPct = $("loaderPct"), loaderText = $("loaderText");
 
   function progress() {
-    const pct = lab.total ? Math.min(99, Math.floor((lab.loaded / lab.total) * 100)) : 0;
+    // 용량 기준 진행률 (빌드 때 기록한 전체 용량), 없으면 파일 개수 기준
+    const byBytes = lab.expectedBytes ? lab.bytes / lab.expectedBytes : 0;
+    const byCount = lab.total ? lab.loaded / lab.total : 0;
+    const pct = Math.min(99, Math.floor(Math.max(byBytes, byCount) * 100));
     barFill.style.width = pct + "%";
     loaderPct.textContent = pct + "%";
     loaderText.textContent = `엔진 내려받는 중… ${fmtMB(lab.bytes)}`;
@@ -201,6 +208,7 @@
   }
 
   async function countResources() {
+    try { lab.expectedBytes = (await (await fetch("lab-size.json", { cache: "no-cache" })).json()).gzBytes || 0; } catch { lab.expectedBytes = 0; }
     try {
       const boot = await (await fetch("_framework/blazor.boot.json", { cache: "no-cache" })).json();
       const res = boot.resources || {};
