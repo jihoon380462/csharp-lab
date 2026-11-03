@@ -1,5 +1,5 @@
 // UnityLite — Unity(UnityEngine) API 를 흉내 낸 작은 라이브러리. 엔진이 Unity 모드에서 학습자 코드와 함께 컴파일한다.
-// 실제 Unity 와 다른 점은 docs/REFERENCE.md "Unity 모드" 절 참고. 이 파일은 엔진 리소스(lib.UnityLite.cs)로 들어간다.
+// 실제 Unity 와 다른 점은 docs/REFERENCE.md "Unity 모드" 절 참고. 이 파일은 엔진 리소스(lib.UnityLite.cs)로 들어간다 (engine/LabRefs.props).
 using System;
 using System.Collections.Generic;
 using System.Globalization;

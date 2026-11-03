@@ -52,8 +52,11 @@ async function loadResource(defaultUri, wasm) {
   }
 }
 
-// .NET 쪽(Exports.PostOutput)이 실행 중 출력을 흘려보낼 때 부르는 함수
-globalThis.labPostOutput = (chunk) => post({ type: "output", chunk });
+// .NET 쪽(Exports)이 부르는 함수들
+globalThis.labPostOutput = (chunk) => post({ type: "output", chunk });          // 실행 중 출력 조각
+globalThis.labPostFrame = (scene) => post({ type: "frame", scene });             // Unity 모드: 프레임 장면
+let inputKeys = "";
+globalThis.labGetInput = () => inputKeys;                                        // Unity 모드: 지금 눌린 키
 
 let api = null;
 let chain = Promise.resolve();
@@ -91,19 +94,34 @@ async function boot() {
   });
 }
 
+const errorJson = (e) => JSON.stringify({ status: "internal-error", stdout: "", diagnostics: [], error: { type: "WorkerError", message: String(e), friendly: "엔진 내부 오류가 났습니다." }, compileMs: 0, runMs: 0, totalMs: 0 });
+
+// 실행 계열(대기열에 줄 섬): 이름 → (api, 메시지) → Promise<JSON 문자열>
+const RUNNERS = {
+  run: (a, m) => a.Run(m.code, m.stdin || ""),
+  runFiles: (a, m) => a.RunFiles(JSON.stringify(m.files), m.stdin || ""),
+  grade: (a, m) => a.Grade(JSON.stringify(m.files), JSON.stringify(m.tests || [])),
+  runUnity: (a, m) => a.RunUnity(m.code, JSON.stringify(m.options || {})),
+};
+
 self.onmessage = (ev) => {
   const m = ev.data;
-  if (m.type === "run") {
-    enqueue(async () => {
-      let json;
-      try {
-        json = await api.Run(m.code, m.stdin || "");
-      } catch (e) {
-        json = JSON.stringify({ status: "internal-error", stdout: "", diagnostics: [], error: { type: "WorkerError", message: String(e), friendly: "엔진 내부 오류가 났습니다." }, compileMs: 0, runMs: 0, totalMs: 0 });
-      }
-      post({ type: "result", id: m.id, json });
-    });
+  if (m.type === "input") { inputKeys = (m.keys || []).join(","); return; }
+  if (m.type === "check") {
+    // 진단만: 가볍고 동기라서 대기열을 거치지 않는다(실행 중에도 응답)
+    let json;
+    try { json = api ? api.Check(JSON.stringify(m.files), m.mode || "console") : JSON.stringify({ diagnostics: [], ms: 0, notReady: true }); }
+    catch (e) { json = JSON.stringify({ diagnostics: [], ms: 0, error: String(e) }); }
+    post({ type: "result", id: m.id, json });
+    return;
   }
+  const runner = RUNNERS[m.type];
+  if (!runner) return;
+  enqueue(async () => {
+    let json;
+    try { json = await runner(api, m); } catch (e) { json = errorJson(e); }
+    post({ type: "result", id: m.id, json });
+  });
 };
 
 boot().catch((e) => post({ type: "error", message: String(e && e.stack || e) }));

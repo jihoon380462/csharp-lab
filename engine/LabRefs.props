@@ -27,10 +27,12 @@
       <LogicalName>labref.%(Filename).dll</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
-  <!-- 학습자 코드와 함께 컴파일하는 라이브러리 소스(예: UnityLite). 엔진 리소스 lib.<파일이름> 으로 들어간다 -->
+  <!-- 학습자 코드와 함께 컴파일하는 라이브러리 소스(예: UnityLite). 엔진 리소스 lib.<이름>.cs 로 들어간다 -->
   <ItemGroup>
-    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Core/Libraries/*.cs.txt">
-      <LogicalName>lib.%(Filename)</LogicalName>
+    <!-- 확장자 .csx: 프로젝트가 직접 컴파일하지 않게. (.cs.txt 는 MSBuild 가 "cs"(체코어) 문화권 리소스로 오인함) -->
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Core/Libraries/*.csx">
+      <LogicalName>lib.%(Filename).cs</LogicalName>
+      <WithCulture>false</WithCulture>
     </EmbeddedResource>
   </ItemGroup>
   <Target Name="LabCheckRefs" BeforeTargets="BeforeBuild">
