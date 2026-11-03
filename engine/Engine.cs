@@ -106,7 +106,8 @@ public static class Engine
         catch (Exception ex)
         {
             result.Status = "internal-error";
-            result.Error = new ErrorInfo { Type = ex.GetType().Name, Message = ex.Message, Friendly = "엔진 내부 오류가 났습니다. 이 화면을 캡처해 알려주세요." };
+            var detail = ex.ToString();
+            result.Error = new ErrorInfo { Type = ex.GetType().Name, Message = detail.Length > 1500 ? detail[..1500] : detail, Friendly = "엔진 내부 오류가 났습니다. 이 화면을 캡처해 알려주세요." };
         }
         result.TotalMs = total.ElapsedMilliseconds;
         return JsonSerializer.Serialize(result, JsonOptions);
@@ -174,10 +175,12 @@ public static class Engine
         var output = new CappedWriter(MaxOutputChars);
         var oldOut = Console.Out;
         var oldErr = Console.Error;
-        var oldIn = Console.In;
+        // 브라우저에서는 Console.In 읽기/SetIn이 막혀 있어(PlatformNotSupported) 내부 필드를 직접 바꾼다.
+        TextReader? oldIn = null;
+        try { oldIn = Console.In; } catch (PlatformNotSupportedException) { }
         Console.SetOut(output);
         Console.SetError(output);
-        Console.SetIn(new StringReader(stdin));
+        SetConsoleIn(new StringReader(stdin));
 
         var run = Stopwatch.StartNew();
         try
@@ -199,11 +202,39 @@ public static class Engine
             Console.Out.Flush();
             Console.SetOut(oldOut);
             Console.SetError(oldErr);
-            Console.SetIn(oldIn);
+            SetConsoleIn(oldIn);
         }
         result.RunMs = run.ElapsedMilliseconds;
         result.Stdout = output.ToString();
         result.OutputTruncated = output.LimitHit;
+    }
+
+    static readonly FieldInfo? ConsoleInField =
+        typeof(Console).GetField("s_in", BindingFlags.NonPublic | BindingFlags.Static);
+
+    static void SetConsoleIn(TextReader? reader)
+    {
+        if (reader is not null)
+        {
+            try { Console.SetIn(reader); return; }
+            catch (PlatformNotSupportedException) { }
+        }
+        ConsoleInField?.SetValue(null, reader is null ? null : TextReader.Synchronized(reader));
+    }
+
+    [JSInvokable]
+    public static string Diagnose()
+    {
+        var sb = new StringBuilder();
+        sb.Append("ui=").Append(CultureInfo.CurrentUICulture.Name).Append(';');
+        sb.Append("s_in=").Append(ConsoleInField is not null).Append(';');
+        try
+        {
+            var rm = new System.Resources.ResourceManager("Microsoft.CodeAnalysis.CSharp.CSharpResources", typeof(CSharpCompilation).Assembly);
+            sb.Append("ko=").Append(rm.GetString("ERR_SemicolonExpected", Korean));
+        }
+        catch (Exception ex) { sb.Append("ko-err=").Append(ex.GetType().Name).Append(':').Append(ex.Message); }
+        return sb.ToString();
     }
 
     static CSharpCompilation MakeCompilation(params SyntaxTree[] trees) =>

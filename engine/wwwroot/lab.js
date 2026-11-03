@@ -84,6 +84,8 @@
     statusEl.className = "status " + (cls || "");
   }
 
+  const lineBtn = (n) => (n > 0 ? `<button class="line" data-line="${n}">${n}번째 줄</button> ` : "");
+
   function render(r) {
     let html = "";
     if (r.stdout) html += `<pre class="stdout">${esc(r.stdout)}</pre>`;
@@ -93,20 +95,20 @@
     const warns = (r.diagnostics || []).filter((d) => d.severity === "warning");
     if (errors.length) {
       html += `<div class="box error"><b>컴파일 오류 ${errors.length}개</b><ul>` +
-        errors.map((d) => `<li><button class="line" data-line="${d.line}">${d.line}번째 줄</button> ${esc(d.message)} <small>${d.id}</small></li>`).join("") +
+        errors.map((d) => `<li>${lineBtn(d.line)}${esc(d.message)} <small>${d.id}</small></li>`).join("") +
         `</ul></div>`;
     }
     if (r.error) {
       const e = r.error;
       const cls = r.status === "stopped" ? "warn" : "error";
-      const where = e.line ? `<button class="line" data-line="${e.line}">${e.line}번째 줄</button> ` : "";
+      const where = lineBtn(e.line || 0);
       html += `<div class="box ${cls}"><b>${r.status === "stopped" ? "실행 중단" : "실행 중 오류"}</b>` +
         `<p>${where}${esc(e.friendly)}</p>` +
         (e.message ? `<p class="raw">${esc(e.type)}: ${esc(e.message)}</p>` : "") + `</div>`;
     }
     if (warns.length) {
       html += `<details class="box warnlist"><summary>경고 ${warns.length}개</summary><ul>` +
-        warns.map((d) => `<li><button class="line" data-line="${d.line}">${d.line}번째 줄</button> ${esc(d.message)} <small>${d.id}</small></li>`).join("") +
+        warns.map((d) => `<li>${lineBtn(d.line)}${esc(d.message)} <small>${d.id}</small></li>`).join("") +
         `</ul></details>`;
     }
     if (!html) html = `<p class="placeholder">(출력 없음)</p>`;
@@ -232,7 +234,13 @@
       lab.failed = String(err);
       return;
     }
+    // 컴파일 오류 메시지를 한국어로: Roslyn 한국어 리소스 불러오기 (실패해도 영어로 동작)
+    try {
+      const rt = (Blazor.runtime && Blazor.runtime.INTERNAL) || (globalThis.getDotnetRuntime && getDotnetRuntime(0).INTERNAL);
+      if (rt && rt.loadSatelliteAssemblies) await rt.loadSatelliteAssemblies(["ko"]);
+    } catch (e) { console.warn("한국어 리소스 로딩 실패", e); }
     lab.loadMs = performance.now() - t0;
+    try { lab.diag = await DotNet.invokeMethodAsync("CsEngine", "Diagnose"); } catch (e) { lab.diag = String(e); }
     $("mLoad").textContent = fmtMs(lab.loadMs);
     $("ver").textContent = "v" + (await DotNet.invokeMethodAsync("CsEngine", "GetVersion"));
 
