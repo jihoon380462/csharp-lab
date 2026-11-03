@@ -1,6 +1,9 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -148,7 +151,8 @@ public static class Engine
         var buildCompilation = MakeCompilation(guardedTree, GuardTree);
 
         using var peStream = new MemoryStream();
-        var emit = buildCompilation.Emit(peStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded));
+        using var pdbStream = new MemoryStream();
+        var emit = buildCompilation.Emit(peStream, pdbStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb));
         result.CompileMs = sw.ElapsedMilliseconds;
         if (!emit.Success)
         {
@@ -159,7 +163,8 @@ public static class Engine
         }
 
         // ── 3) 실행 ──
-        var assembly = Assembly.Load(peStream.ToArray());
+        var pdbBytes = pdbStream.ToArray();
+        var assembly = Assembly.Load(peStream.ToArray(), pdbBytes);
         var guardType = assembly.GetType("__LabGuard")!;
         guardType.GetField("MaxDepth")!.SetValue(null, MaxDepth);
         guardType.GetField("Deadline")!.SetValue(null, Environment.TickCount64 + TimeLimitMs);
@@ -185,6 +190,7 @@ public static class Engine
         var run = Stopwatch.StartNew();
         try
         {
+            entry = ResolveAsyncEntry(entry);
             object?[] args = entry.GetParameters().Length == 0 ? Array.Empty<object?>() : new object?[] { Array.Empty<string>() };
             var returned = entry.Invoke(null, args);
             if (returned is Task task) await task;
@@ -195,6 +201,7 @@ public static class Engine
             var real = ex is TargetInvocationException tie && tie.InnerException is not null ? tie.InnerException : ex;
             result.Status = "runtime-error";
             result.Error = Describe(real, output.LimitHit);
+            result.Error.Line ??= FindUserLine(real, assembly, pdbBytes);
             if (result.Error.Type is "Timeout" or "OutputLimit" or "TooDeep") result.Status = "stopped";
         }
         finally
@@ -207,6 +214,49 @@ public static class Engine
         result.RunMs = run.ElapsedMilliseconds;
         result.Stdout = output.ToString();
         result.OutputTruncated = output.LimitHit;
+    }
+
+    /// <summary>
+    /// async Main(최상위 await 포함)은 컴파일러가 동기 래퍼 &lt;Main&gt;을 진입점으로 만든다.
+    /// 래퍼는 .GetAwaiter().GetResult()로 막고 기다려서 브라우저(단일 스레드)에서 실패하므로 원래 async 메서드를 직접 부른다.
+    /// </summary>
+    static MethodInfo ResolveAsyncEntry(MethodInfo entry)
+    {
+        if (entry.Name != "<Main>" || entry.DeclaringType is null) return entry;
+        var target = entry.DeclaringType
+            .GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+            .FirstOrDefault(m => m != entry && (m.Name == "<Main>$" || m.Name == "Main") && typeof(Task).IsAssignableFrom(m.ReturnType));
+        return target ?? entry;
+    }
+
+    /// <summary>예외 스택에서 학습자 코드의 첫 프레임을 찾아 PDB로 줄 번호를 계산한다.</summary>
+    static int? FindUserLine(Exception ex, Assembly userAssembly, byte[] pdb)
+    {
+        try
+        {
+            var frames = new StackTrace(ex, false).GetFrames();
+            using var provider = MetadataReaderProvider.FromPortablePdbImage(ImmutableArray.Create(pdb));
+            var reader = provider.GetMetadataReader();
+            foreach (var frame in frames)
+            {
+                var method = frame.GetMethod();
+                if (method is null || method.Module.Assembly != userAssembly) continue;
+                if (method.DeclaringType?.Name == "__LabGuard") continue;
+                int il = frame.GetILOffset();
+                if (il < 0) continue;
+                var handle = MetadataTokens.MethodDefinitionHandle(method.MetadataToken);
+                int? line = null;
+                foreach (var sp in reader.GetMethodDebugInformation(handle.ToDebugInformationHandle()).GetSequencePoints())
+                {
+                    if (sp.IsHidden) continue;
+                    if (sp.Offset > il) break;
+                    if (reader.GetString(reader.GetDocument(sp.Document).Name) == "Program.cs") line = sp.StartLine;
+                }
+                if (line is not null) return line;
+            }
+        }
+        catch { }
+        return null;
     }
 
     static readonly FieldInfo? ConsoleInField =
