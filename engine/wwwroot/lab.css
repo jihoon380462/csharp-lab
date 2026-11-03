@@ -89,7 +89,7 @@ h1 { font-size: 19px; margin: 0; letter-spacing: -0.02em; }
 .run-icon { font-size: 13px; }
 
 /* 출력 */
-.output { flex: 1; min-height: 180px; padding: 12px 14px; overflow: auto; transition: opacity .15s; }
+.output { flex: 1; min-height: 180px; max-height: 60vh; padding: 12px 14px; overflow: auto; transition: opacity .15s; }
 @media (min-width: 900px) { .output { min-height: 0; max-height: 470px; } }
 .output.dim { opacity: .4; }
 .placeholder { color: var(--muted); font-size: 14px; margin: 0; }
