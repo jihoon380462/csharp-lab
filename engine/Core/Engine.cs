@@ -15,12 +15,13 @@ using System.Text.Json.Serialization;
 namespace CsEngine;
 
 /// <summary>
-/// 브라우저 안에서 C# 코드를 컴파일(Roslyn)하고 실행하는 엔진.
-/// 브라우저에서는 Exports.cs(JSExport)를 통해 Web Worker 안에서 불린다.
+/// C# 코드를 컴파일(Roslyn)하고 같은 프로세스 안에서 실행하는 엔진.
+/// Core 폴더는 플랫폼과 무관하다: 브라우저에서는 Browser/Exports.cs(JSExport)가 Web Worker 안에서 부르고,
+/// 데스크톱 .NET(tests/EngineTests 등)에서는 Engine.Run 을 직접 부른다. 사용법은 docs/MANUAL.md.
 /// </summary>
 public static class Engine
 {
-    public const string EngineVersion = "0.2.0";
+    public const string EngineVersion = "0.2.1";
     public const int TimeLimitMs = 10000;
     public const int MaxDepth = 2000;
     public const int MaxOutputChars = 100_000;
@@ -117,7 +118,15 @@ public static class Engine
         return sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture);
     }
 
-    public static async Task<string> Run(string code, string? stdin)
+    /// <summary>코드를 컴파일·실행하고 결과를 JSON 문자열(camelCase)로 돌려준다. 브라우저 쪽이 쓰는 형태.</summary>
+    public static async Task<string> Run(string code, string? stdin) =>
+        ToJson(await RunAsync(code, stdin));
+
+    /// <summary>결과 객체를 JSON 문자열로 (브라우저로 보내는 것과 같은 모양).</summary>
+    public static string ToJson(RunResult result) => JsonSerializer.Serialize(result, LabJson.Default.RunResult);
+
+    /// <summary>코드를 컴파일·실행하고 결과 객체를 돌려준다. 데스크톱 .NET 에서 쓰기 좋은 형태.</summary>
+    public static async Task<RunResult> RunAsync(string code, string? stdin = "")
     {
         var result = new RunResult();
         var total = Stopwatch.StartNew();
@@ -132,7 +141,7 @@ public static class Engine
             result.Error = new ErrorInfo { Type = ex.GetType().Name, Message = detail.Length > 1500 ? detail[..1500] : detail, Friendly = "엔진 내부 오류가 났습니다. 이 화면을 캡처해 알려주세요." };
         }
         result.TotalMs = total.ElapsedMilliseconds;
-        return JsonSerializer.Serialize(result, LabJson.Default.RunResult);
+        return result;
     }
 
     static async Task RunCore(string code, string stdin, RunResult result)
@@ -387,84 +396,4 @@ public static class Engine
         };
         return new ErrorInfo { Type = ex.GetType().Name, Message = ex.Message, Friendly = friendly, Line = line };
     }
-}
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(RunResult))]
-internal partial class LabJson : JsonSerializerContext { }
-
-public sealed class RunResult
-{
-    public string Status { get; set; } = "";
-    public string Stdout { get; set; } = "";
-    public bool OutputTruncated { get; set; }
-    public List<DiagnosticInfo> Diagnostics { get; set; } = new();
-    public ErrorInfo? Error { get; set; }
-    public long CompileMs { get; set; }
-    public long RunMs { get; set; }
-    public long TotalMs { get; set; }
-    public bool EmitRetried { get; set; }
-}
-
-public sealed class DiagnosticInfo
-{
-    public string Severity { get; set; } = "";
-    public string Id { get; set; } = "";
-    public int Line { get; set; }
-    public int Column { get; set; }
-    public int EndLine { get; set; }
-    public int EndColumn { get; set; }
-    public string Message { get; set; } = "";
-}
-
-public sealed class ErrorInfo
-{
-    public string Type { get; set; } = "";
-    public string Message { get; set; } = "";
-    public string Friendly { get; set; } = "";
-    public int? Line { get; set; }
-}
-
-sealed class OutputLimitException : Exception { }
-
-/// <summary>출력 상한을 넘으면 예외를 던져 프로그램을 멈추는 Writer. 실행 중에도 일정 간격으로 출력을 흘려보낸다.</summary>
-sealed class CappedWriter : StringWriter
-{
-    readonly int _max;
-    readonly Action<string>? _sink;
-    int _sent;
-    long _lastSend = Environment.TickCount64;
-    public bool LimitHit { get; private set; }
-    public CappedWriter(int max, Action<string>? sink) { _max = max; _sink = sink; }
-
-    void Check()
-    {
-        if (LimitHit) throw new OutputLimitException();
-        var sb = GetStringBuilder();
-        if (sb.Length > _max)
-        {
-            LimitHit = true;
-            sb.Length = _max;
-            throw new OutputLimitException();
-        }
-        if (_sink is not null && Environment.TickCount64 - _lastSend >= 100) Pump();
-    }
-
-    /// <summary>아직 안 보낸 출력을 바깥으로 보낸다.</summary>
-    public void Pump()
-    {
-        if (_sink is null) return;
-        _lastSend = Environment.TickCount64;
-        var sb = GetStringBuilder();
-        if (sb.Length <= _sent) return;
-        var chunk = sb.ToString(_sent, sb.Length - _sent);
-        _sent = sb.Length;
-        try { _sink(chunk); } catch { }
-    }
-
-    public override void Write(char value) { if (LimitHit) throw new OutputLimitException(); base.Write(value); Check(); }
-    public override void Write(string? value) { if (LimitHit) throw new OutputLimitException(); base.Write(value); Check(); }
-    public override void Write(char[] buffer, int index, int count) { if (LimitHit) throw new OutputLimitException(); base.Write(buffer, index, count); Check(); }
-    public override void Write(ReadOnlySpan<char> buffer) { if (LimitHit) throw new OutputLimitException(); base.Write(buffer); Check(); }
-    public override void WriteLine(ReadOnlySpan<char> buffer) { if (LimitHit) throw new OutputLimitException(); base.WriteLine(buffer); Check(); }
 }

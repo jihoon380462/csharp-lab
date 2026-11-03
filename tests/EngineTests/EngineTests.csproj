@@ -8,8 +8,7 @@
   </PropertyGroup>
   <Import Project="../../engine/LabRefs.props" />
   <ItemGroup>
-    <Compile Include="../../engine/Engine.cs" Link="Engine.cs" />
-    <Compile Include="../../engine/GuardRewriter.cs" Link="GuardRewriter.cs" />
+    <Compile Include="../../engine/Core/*.cs" LinkBase="Core" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />

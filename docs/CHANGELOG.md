@@ -1,0 +1,20 @@
+# CHANGELOG
+
+## v0.2.1 — 2026-11-03
+- 저장소 정리: 엔진 소스를 `engine/Core/`(플랫폼 무관: Engine·GuardRewriter·RunResult·CappedWriter)와 `engine/Browser/`(JSExport·Main)로 분리.
+- 데스크톱용 타입 API `Engine.RunAsync(code, stdin) → RunResult`, `Engine.ToJson` 추가 (기존 `Run` 은 그대로 JSON 문자열).
+- 문서: `CLAUDE.md`(다른 세션 첫 안내), `docs/MANUAL.md`·`ARCHITECTURE.md`·`DEVELOPMENT.md`·`PITFALLS.md`.
+- 브라우저 QA 스크립트를 저장소로(`qa/browser/`), 도구 `tools/ship.sh`·`fetch-build.sh`·`deploy.sh`, 실험 자리 `engine/wwwroot/labs/`.
+
+## v0.2.0 — 2026-11-03
+- .NET 8 Blazor → **.NET 10 WebAssembly SDK + Web Worker**. 실행 중에도 화면이 안 멈춤.
+- ■ 중지 버튼(Worker 종료 후 자동 재시작), 실행 중 출력 실시간 표시, 연속 실행 대기열.
+- 로딩 14.3MB → 8.4MB(gzip): 트리밍 + 실행용 루트 지정, 참조 어셈블리 12개만 포함, brotli 자동 사용(지원 브라우저).
+- 컴파일러 예열을 뒤에서 진행(로딩 끝나면 바로 실행 요청 가능).
+- 자동 중단 시간 5초 → 10초.
+- 수정: 연속 실행 시 Roslyn Emit 대기 실패(양보 + 재시도), 트리밍으로 지워진 형식 전달(facade 루트 지정).
+
+## v0.1.0 — 2026-11-03
+- 첫 시제품: Blazor WebAssembly(.NET 8) + Roslyn 으로 브라우저 안 C# 컴파일·실행.
+- 한국어 컴파일 오류 + 줄 번호, 실행 오류 줄 번호(PDB) + 쉬운 설명, 무한 반복·재귀·출력 폭주 자동 중단, Console.ReadLine 입력, 최상위 await.
+- 실험실 화면(예제 11개, 편집기 줄 번호·자동 들여쓰기·Ctrl+Enter, 측정값).
