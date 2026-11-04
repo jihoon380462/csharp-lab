@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>C# 실험실</title>
+  <base href="/csharp-lab/" />
+  <link rel="stylesheet" href="lab.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">C#</span>
+      <div>
+        <h1>C# 실험실</h1>
+        <p class="sub">브라우저 실행 엔진 테스트 · <span id="ver">v0.4.0</span></p>
+      </div>
+    </div>
+  </header>
+
+  <section class="loader" id="loader" aria-live="polite">
+    <div class="loader-row">
+      <span id="loaderText">엔진 내려받는 중…</span>
+      <span id="loaderPct">0%</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    <p class="loader-note">처음 한 번만 오래 걸리고, 이후엔 브라우저에 저장돼서 빨라집니다.</p>
+  </section>
+
+  <nav class="examples" id="examples" aria-label="예제"></nav>
+
+  <main class="layout">
+    <section class="panel editor-panel">
+      <div class="panel-head">
+        <span>Program.cs</span>
+        <span class="hint">Ctrl+Enter 실행</span>
+      </div>
+      <div class="editor" id="editorHost"></div>
+      <div id="symbar"></div>
+      <div class="livecheck" id="liveCheck" aria-live="polite"></div>
+      <details class="stdin" id="stdinBox">
+        <summary>입력값 <small>(Console.ReadLine이 한 줄씩 읽음)</small></summary>
+        <textarea id="stdin" spellcheck="false" autocapitalize="off" autocorrect="off" rows="3" placeholder="예) 홍길동&#10;20"></textarea>
+      </details>
+      <button class="run" id="runBtn" disabled>
+        <span class="run-icon">▶</span><span id="runLabel">엔진 준비 중…</span>
+      </button>
+    </section>
+
+    <section class="panel out-panel">
+      <div class="panel-head">
+        <span>실행 결과</span>
+        <span class="status" id="status"></span>
+      </div>
+      <div class="output" id="output"><p class="placeholder">코드를 실행하면 여기에 결과가 나옵니다.</p></div>
+      <div class="metrics" id="metrics">
+        <div><span>엔진 로딩</span><b id="mLoad">-</b></div>
+        <div><span>예열(첫 컴파일)</span><b id="mWarm">-</b></div>
+        <div><span>컴파일</span><b id="mCompile">-</b></div>
+        <div><span>실행</span><b id="mRun">-</b></div>
+        <div><span>받은 용량</span><b id="mBytes">-</b></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="labs-links" aria-label="실험 페이지">
+    <span>🧪 실험:</span>
+    <a href="labs/grading/">채점 (여러 파일·테스트)</a>
+    <a href="labs/unity/">Unity 시뮬레이터</a>
+    <a href="labs/patterns/">디자인 패턴 (클래스 다이어그램)</a>
+  </nav>
+
+  <footer class="foot">
+    자동 중단: 10초 · 재귀 2,000단계 · 출력 10만 자 (언제든 ■ 중지 가능). 모든 코드는 이 브라우저 안에서만 실행됩니다.
+  </footer>
+
+  <script src="examples.js"></script>
+  <script type="module" src="lab.js"></script>
+</body>
+</html>

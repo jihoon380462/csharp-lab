@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>디자인 패턴 실험</title>
+  <link rel="stylesheet" href="../../lab.css" />
+  <link rel="stylesheet" href="../shared/labs.css" />
+  <link rel="stylesheet" href="patterns.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <a class="logo" href="../../" title="실험실로">C#</a>
+      <div>
+        <h1>디자인 패턴</h1>
+        <p class="sub">코드를 고치면 클래스 다이어그램과 구조 체크가 바로 바뀌어요 · <span id="ver">-</span></p>
+      </div>
+    </div>
+  </header>
+
+  <section class="loader" id="loader" aria-live="polite">
+    <div class="loader-row"><span id="loaderText">엔진 내려받는 중…</span><span id="loaderPct">0%</span></div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </section>
+
+  <section class="picker">
+    <button class="ghost nav" id="prevBtn" type="button" aria-label="이전 패턴">◀</button>
+    <select id="patternSel" aria-label="패턴 고르기"></select>
+    <button class="ghost nav" id="nextBtn" type="button" aria-label="다음 패턴">▶</button>
+  </section>
+
+  <section class="info" id="info"></section>
+
+  <main class="layout">
+    <section class="panel editor-panel">
+      <div class="panel-head"><span>Program.cs</span><span class="hint">Ctrl+Enter 실행</span></div>
+      <div class="editor" id="editorHost"></div>
+      <div id="symbar"></div>
+      <div class="livecheck" id="liveCheck"></div>
+      <div class="btn-row">
+        <button class="run" id="runBtn" disabled><span class="run-icon">▶</span><span id="runLabel">엔진 준비 중…</span></button>
+        <button class="ghost" id="gradeBtn" type="button" disabled>✓ 채점</button>
+        <button class="ghost" id="resetBtn" type="button">처음으로</button>
+      </div>
+    </section>
+
+    <section class="panel out-panel">
+      <div class="panel-head"><span>구조 (클래스 다이어그램)</span><span class="status" id="anaStatus"></span></div>
+      <div class="diagram" id="diagram"></div>
+      <div id="legend"></div>
+      <div class="panel-head"><span>구조 체크</span><span class="status" id="ruleStatus"></span></div>
+      <ul class="rules" id="rules"></ul>
+      <div class="panel-head"><span>실행 결과</span><span class="status" id="status"></span></div>
+      <div class="output" id="output"><p class="placeholder">▶ 실행하면 결과가, ✓ 채점하면 출력+구조 판정이 나옵니다.</p></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    구조 체크는 실행하지 않고 코드 모양(클래스·인터페이스·상속·필드·new·if 등)만 봅니다 — 같은 출력이라도 패턴을 안 쓰면 통과하지 못해요.
+    다이어그램 상자를 누르면 코드의 그 줄로 이동합니다.
+  </footer>
+
+  <script type="module" src="patterns.js"></script>
+</body>
+</html>

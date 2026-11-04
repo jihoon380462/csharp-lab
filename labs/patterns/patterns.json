@@ -1,0 +1,676 @@
+[
+ {
+  "id": "singleton",
+  "cat": "생성",
+  "name": "싱글턴",
+  "en": "Singleton",
+  "when": "설정·로그처럼 프로그램 전체에 딱 하나만 있어야 하는 객체",
+  "idea": "생성자를 막고(private), 하나뿐인 인스턴스를 static 으로 꺼내 쓴다.",
+  "code": "var a = Config.Instance;\nvar b = Config.Instance;\nConsole.WriteLine(ReferenceEquals(a, b));   // 같은 객체인가?\nConsole.WriteLine(a.Volume);\n\nsealed class Config\n{\n    // 처음 꺼낼 때 한 번만 만든다\n    static readonly Lazy<Config> _instance = new(() => new Config());\n    public static Config Instance => _instance.Value;\n\n    public int Volume { get; set; } = 7;\n\n    private Config()   // 밖에서 new Config() 를 못 하게\n    {\n        Console.WriteLine(\"설정 생성\");\n    }\n}\n",
+  "expect": "설정 생성\nTrue\n7\n",
+  "rules": [
+   {
+    "text": "생성자를 private 으로 막은 클래스",
+    "count": {
+     "kind": "class",
+     "privateConstructor": true
+    }
+   },
+   {
+    "text": "자기 자신을 담는 static 필드·속성",
+    "count": {
+     "kind": "class",
+     "has": "self"
+    }
+   }
+  ]
+ },
+ {
+  "id": "factory-method",
+  "cat": "생성",
+  "name": "팩토리 메서드",
+  "en": "Factory Method",
+  "when": "어떤 객체를 만들지 실행 중에 정해야 할 때 (적 종류, 문서 종류 …)",
+  "idea": "만드는 일을 한곳(메서드)에 모으고, 쓰는 쪽은 공통 부모 타입만 안다.",
+  "code": "foreach (var kind in new[] { \"slime\", \"orc\" })\n{\n    Enemy e = EnemyFactory.Create(kind);\n    Console.WriteLine($\"{e.Name}: {e.Cry()}\");\n}\n\nstatic class EnemyFactory\n{\n    public static Enemy Create(string kind) => kind switch\n    {\n        \"slime\" => new Slime(),\n        \"orc\" => new Orc(),\n        _ => throw new ArgumentException(\"모르는 적: \" + kind),\n    };\n}\n\nabstract class Enemy\n{\n    public abstract string Name { get; }\n    public abstract string Cry();\n}\n\nclass Slime : Enemy\n{\n    public override string Name => \"슬라임\";\n    public override string Cry() => \"말랑\";\n}\n\nclass Orc : Enemy\n{\n    public override string Name => \"오크\";\n    public override string Cry() => \"우오오\";\n}\n",
+  "expect": "슬라임: 말랑\n오크: 우오오\n",
+  "rules": [
+   {
+    "text": "자식이 2개 이상인 공통 부모(추상 클래스·인터페이스)",
+    "count": {
+     "kind": "abstraction",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "부모 타입을 돌려주며 자식들을 new 하는 공장",
+    "count": {
+     "creates": "Slime"
+    }
+   },
+   {
+    "text": "공장이 2종류 이상 만든다",
+    "relation": {
+     "from": "EnemyFactory",
+     "kind": "creates"
+    },
+    "min": 2
+   }
+  ]
+ },
+ {
+  "id": "abstract-factory",
+  "cat": "생성",
+  "name": "추상 팩토리",
+  "en": "Abstract Factory",
+  "when": "서로 어울리는 부품 묶음(다크 테마 버튼+패널 …)을 통째로 바꿔 끼울 때",
+  "idea": "부품마다 인터페이스를 두고, 묶음을 만드는 공장도 인터페이스로 만든다.",
+  "code": "IUiFactory factory = new DarkFactory();     // LightFactory 로 바꾸면 전부 바뀜\nConsole.WriteLine(factory.CreateButton().Draw());\nConsole.WriteLine(factory.CreatePanel().Draw());\n\ninterface IButton { string Draw(); }\ninterface IPanel { string Draw(); }\n\ninterface IUiFactory\n{\n    IButton CreateButton();\n    IPanel CreatePanel();\n}\n\nclass DarkFactory : IUiFactory\n{\n    public IButton CreateButton() => new DarkButton();\n    public IPanel CreatePanel() => new DarkPanel();\n}\n\nclass DarkButton : IButton { public string Draw() => \"[검은 버튼]\"; }\nclass DarkPanel : IPanel { public string Draw() => \"[검은 패널]\"; }\n",
+  "expect": "[검은 버튼]\n[검은 패널]\n",
+  "rules": [
+   {
+    "text": "인터페이스 3개 이상 (공장 1 + 부품 2)",
+    "count": {
+     "kind": "interface"
+    },
+    "min": 3
+   },
+   {
+    "text": "공장 인터페이스를 구현한 구체 공장",
+    "count": {
+     "implements": "IUiFactory"
+    }
+   },
+   {
+    "text": "구체 공장이 부품 2종류 이상을 만든다",
+    "relation": {
+     "from": "DarkFactory",
+     "kind": "creates"
+    },
+    "min": 2
+   }
+  ]
+ },
+ {
+  "id": "builder",
+  "cat": "생성",
+  "name": "빌더",
+  "en": "Builder",
+  "when": "선택 항목이 많은 객체를 단계별로 조립할 때",
+  "idea": "조립 메서드가 자기 자신(this)을 돌려줘서 . 으로 이어 쓰고, 마지막에 Build().",
+  "code": "var pizza = new PizzaBuilder()\n    .Size(\"L\")\n    .Add(\"치즈\")\n    .Add(\"버섯\")\n    .Build();\nConsole.WriteLine(pizza);\n\nrecord Pizza(string Size, List<string> Toppings)\n{\n    public override string ToString() => $\"{Size}: {string.Join(\", \", Toppings)}\";\n}\n\nclass PizzaBuilder\n{\n    string _size = \"M\";\n    readonly List<string> _toppings = new();\n\n    public PizzaBuilder Size(string size) { _size = size; return this; }\n    public PizzaBuilder Add(string topping) { _toppings.Add(topping); return this; }\n    public Pizza Build() => new Pizza(_size, new List<string>(_toppings));\n}\n",
+  "expect": "L: 치즈, 버섯\n",
+  "rules": [
+   {
+    "text": "자기 자신을 돌려주는 메서드 2개 이상 (메서드 연결)",
+    "count": {
+     "returnsSelf": 2
+    }
+   },
+   {
+    "text": "완성품을 만드는 Build",
+    "count": {
+     "member": "Build",
+     "memberKind": "method"
+    }
+   },
+   {
+    "text": "빌더가 완성품을 new 한다",
+    "relation": {
+     "from": "PizzaBuilder",
+     "to": "Pizza",
+     "kind": "creates"
+    }
+   }
+  ]
+ },
+ {
+  "id": "prototype",
+  "cat": "생성",
+  "name": "프로토타입",
+  "en": "Prototype",
+  "when": "만들기 비싼 객체를 복사해서 조금만 바꿔 쓸 때",
+  "idea": "객체가 스스로를 복제하는 메서드를 가진다. 얕은 복사와 깊은 복사의 차이에 주의.",
+  "code": "var original = new Sheep { Name = \"돌리\", Tags = new() { \"흰색\" } };\n\nvar deep = original.DeepClone();\ndeep.Tags.Add(\"깊은복제\");            // 원본 목록은 그대로\n\nvar shallow = original.ShallowClone();\nshallow.Tags.Add(\"얕은복제\");         // 원본과 같은 목록을 함께 씀!\n\nConsole.WriteLine(string.Join(\",\", original.Tags));\nConsole.WriteLine(string.Join(\",\", deep.Tags));\n\nclass Sheep\n{\n    public string Name = \"\";\n    public List<string> Tags = new();\n\n    public Sheep ShallowClone() => (Sheep)MemberwiseClone();\n    public Sheep DeepClone() => new Sheep { Name = Name, Tags = new List<string>(Tags) };\n}\n",
+  "expect": "흰색,얕은복제\n흰색,깊은복제\n",
+  "rules": [
+   {
+    "text": "복제 메서드(…Clone)를 가진 클래스",
+    "count": {
+     "member": "/Clone/",
+     "memberKind": "method"
+    }
+   },
+   {
+    "text": "MemberwiseClone 으로 얕은 복사",
+    "calls": "MemberwiseClone"
+   }
+  ]
+ },
+ {
+  "id": "adapter",
+  "cat": "구조",
+  "name": "어댑터",
+  "en": "Adapter",
+  "when": "이미 있는 클래스를 고칠 수 없는데, 다른 모양(인터페이스)으로 써야 할 때",
+  "idea": "원하는 인터페이스를 구현하는 껍데기가 옛 클래스를 품고 호출을 번역한다.",
+  "code": "IPrinter printer = new PrinterAdapter(new OldPrinter());\nConsole.WriteLine(printer.Print(\"hello\"));\n\ninterface IPrinter { string Print(string text); }\n\nclass OldPrinter   // 고칠 수 없는 옛 코드\n{\n    public string PrintUpper(string s) => \"*** \" + s.ToUpper() + \" ***\";\n}\n\nclass PrinterAdapter : IPrinter\n{\n    readonly OldPrinter _old;\n    public PrinterAdapter(OldPrinter old) { _old = old; }\n    public string Print(string text) => _old.PrintUpper(text);\n}\n",
+  "expect": "*** HELLO ***\n",
+  "rules": [
+   {
+    "text": "새 인터페이스를 구현하면서 옛 클래스를 품은 어댑터",
+    "count": {
+     "implements": "IPrinter",
+     "has": "OldPrinter"
+    }
+   },
+   {
+    "text": "옛 클래스는 인터페이스를 구현하지 않는다 (고치지 않음)",
+    "count": {
+     "name": "OldPrinter",
+     "implements": "*"
+    },
+    "max": 0
+   }
+  ]
+ },
+ {
+  "id": "decorator",
+  "cat": "구조",
+  "name": "데코레이터",
+  "en": "Decorator",
+  "when": "기능을 겹겹이 덧붙이고 싶을 때 (커피+우유+시럽, 로그+압축+암호화 …)",
+  "idea": "같은 인터페이스를 구현하는 포장지가 안쪽 객체를 품고, 결과에 자기 몫을 더한다.",
+  "code": "ICoffee coffee = new Milk(new Syrup(new Basic()));\nConsole.WriteLine($\"{coffee.Name()} = {coffee.Cost()}원\");\n\ninterface ICoffee\n{\n    string Name();\n    int Cost();\n}\n\nclass Basic : ICoffee\n{\n    public string Name() => \"커피\";\n    public int Cost() => 3000;\n}\n\nabstract class Topping : ICoffee\n{\n    protected readonly ICoffee Inner;\n    protected Topping(ICoffee inner) { Inner = inner; }\n    public abstract string Name();\n    public abstract int Cost();\n}\n\nclass Milk : Topping\n{\n    public Milk(ICoffee inner) : base(inner) { }\n    public override string Name() => Inner.Name() + \"+우유\";\n    public override int Cost() => Inner.Cost() + 500;\n}\n\nclass Syrup : Topping\n{\n    public Syrup(ICoffee inner) : base(inner) { }\n    public override string Name() => Inner.Name() + \"+시럽\";\n    public override int Cost() => Inner.Cost() + 300;\n}\n",
+  "expect": "커피+시럽+우유 = 3800원\n",
+  "rules": [
+   {
+    "text": "인터페이스를 구현하면서 같은 인터페이스를 품은 포장지",
+    "count": {
+     "implements": "ICoffee",
+     "has": "ICoffee"
+    }
+   },
+   {
+    "text": "포장지(장식) 종류 2개 이상",
+    "count": {
+     "inherits": "Topping"
+    },
+    "min": 2
+   }
+  ]
+ },
+ {
+  "id": "composite",
+  "cat": "구조",
+  "name": "컴포지트",
+  "en": "Composite",
+  "when": "폴더 안의 폴더, 그룹 안의 그룹처럼 나무 구조를 하나처럼 다룰 때",
+  "idea": "잎과 가지가 같은 부모를 가지고, 가지는 자식(부모 타입)들을 모아 품는다.",
+  "code": "var root = new Folder(\"루트\",\n    new FileItem(\"a.txt\", 3),\n    new Folder(\"사진\",\n        new FileItem(\"b.png\", 5),\n        new FileItem(\"c.png\", 2)));\nConsole.WriteLine($\"{root.Name} 전체 크기: {root.Size()}\");\n\nabstract class Node\n{\n    public string Name { get; }\n    protected Node(string name) { Name = name; }\n    public abstract int Size();\n}\n\nclass FileItem : Node\n{\n    readonly int _size;\n    public FileItem(string name, int size) : base(name) { _size = size; }\n    public override int Size() => _size;\n}\n\nclass Folder : Node\n{\n    readonly List<Node> _children;\n    public Folder(string name, params Node[] children) : base(name) { _children = children.ToList(); }\n    public override int Size() => _children.Sum(c => c.Size());\n}\n",
+  "expect": "루트 전체 크기: 10\n",
+  "rules": [
+   {
+    "text": "자식이 2개 이상인 공통 부모",
+    "count": {
+     "kind": "abstraction",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "부모 타입 여러 개를 품은 가지(복합) 노드",
+    "relation": {
+     "from": "Folder",
+     "to": "Node",
+     "kind": "has"
+    }
+   }
+  ]
+ },
+ {
+  "id": "proxy",
+  "cat": "구조",
+  "name": "프록시",
+  "en": "Proxy",
+  "when": "진짜 객체가 무거워서 필요할 때까지 만들기를 미루거나, 접근을 검사할 때",
+  "idea": "진짜와 같은 인터페이스를 구현한 대리인이 진짜를 품고, 필요할 때만 만든다.",
+  "code": "IImage image = new LazyImage(\"cat.png\");\nConsole.WriteLine(\"목록 표시 (아직 안 불러옴)\");\nimage.Show();\nimage.Show();\n\ninterface IImage { void Show(); }\n\nclass RealImage : IImage\n{\n    readonly string _file;\n    public RealImage(string file)\n    {\n        _file = file;\n        Console.WriteLine(\"무거운 로딩: \" + file);\n    }\n    public void Show() => Console.WriteLine(\"보여줌: \" + _file);\n}\n\nclass LazyImage : IImage\n{\n    readonly string _file;\n    RealImage _real;\n    public LazyImage(string file) { _file = file; }\n    public void Show()\n    {\n        _real ??= new RealImage(_file);   // 처음 한 번만 만든다\n        _real.Show();\n    }\n}\n",
+  "expect": "목록 표시 (아직 안 불러옴)\n무거운 로딩: cat.png\n보여줌: cat.png\n보여줌: cat.png\n",
+  "rules": [
+   {
+    "text": "진짜와 대리인이 같은 인터페이스를 구현 (2개 이상)",
+    "count": {
+     "implements": "IImage"
+    },
+    "min": 2
+   },
+   {
+    "text": "대리인이 진짜를 품고 직접 만든다",
+    "count": {
+     "has": "RealImage",
+     "creates": "RealImage"
+    }
+   }
+  ]
+ },
+ {
+  "id": "facade",
+  "cat": "구조",
+  "name": "퍼사드",
+  "en": "Facade",
+  "when": "여러 부품을 정해진 순서로 다뤄야 하는 복잡한 일을 버튼 하나로",
+  "idea": "앞에 선 창구 클래스가 부품들을 품고, 쓰는 쪽은 창구 메서드 하나만 부른다.",
+  "code": "var theater = new HomeTheater();\ntheater.WatchMovie(\"인터스텔라\");\n\nclass HomeTheater\n{\n    readonly Tv _tv = new();\n    readonly Speaker _speaker = new();\n    readonly Light _light = new();\n\n    public void WatchMovie(string title)\n    {\n        _light.Dim();\n        _tv.On();\n        _speaker.Volume(7);\n        Console.WriteLine($\"▶ {title} 재생\");\n    }\n}\n\nclass Tv { public void On() => Console.WriteLine(\"TV 켬\"); }\nclass Speaker { public void Volume(int v) => Console.WriteLine($\"볼륨 {v}\"); }\nclass Light { public void Dim() => Console.WriteLine(\"조명 어둡게\"); }\n",
+  "expect": "조명 어둡게\nTV 켬\n볼륨 7\n▶ 인터스텔라 재생\n",
+  "rules": [
+   {
+    "text": "창구 클래스가 부품 3개 이상을 품는다",
+    "relation": {
+     "from": "HomeTheater",
+     "kind": "has"
+    },
+    "min": 3
+   }
+  ]
+ },
+ {
+  "id": "bridge",
+  "cat": "구조",
+  "name": "브리지",
+  "en": "Bridge",
+  "when": "두 방향으로 종류가 늘어날 때 (모양 × 색, 리모컨 × 기기) 조합 폭발을 막기",
+  "idea": "한쪽 계층이 다른 쪽 계층을 인터페이스로 품어서 둘을 따로 늘린다.",
+  "code": "Shape[] shapes = { new Circle(new Red()), new Square(new Blue()) };\nforeach (var s in shapes) Console.WriteLine(s.Draw());\n\ninterface IColor { string Fill(); }\nclass Red : IColor { public string Fill() => \"빨강\"; }\nclass Blue : IColor { public string Fill() => \"파랑\"; }\n\nabstract class Shape\n{\n    protected readonly IColor Color;\n    protected Shape(IColor color) { Color = color; }\n    public abstract string Draw();\n}\n\nclass Circle : Shape\n{\n    public Circle(IColor c) : base(c) { }\n    public override string Draw() => Color.Fill() + \" 원\";\n}\n\nclass Square : Shape\n{\n    public Square(IColor c) : base(c) { }\n    public override string Draw() => Color.Fill() + \" 네모\";\n}\n",
+  "expect": "빨강 원\n파랑 네모\n",
+  "rules": [
+   {
+    "text": "색 쪽 구현 2개 이상",
+    "count": {
+     "name": "IColor",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "모양 쪽 구현 2개 이상",
+    "count": {
+     "name": "Shape",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "모양이 색을 인터페이스로 품는다 (다리)",
+    "relation": {
+     "from": "Shape",
+     "to": "IColor",
+     "kind": "has"
+    }
+   }
+  ]
+ },
+ {
+  "id": "flyweight",
+  "cat": "구조",
+  "name": "플라이웨이트",
+  "en": "Flyweight",
+  "when": "같은 데이터가 수천 번 반복될 때 (숲의 나무 종류, 글자 모양 …) 메모리 아끼기",
+  "idea": "공장이 이미 만든 것을 사전에 보관했다가 같은 키면 다시 꺼내 준다.",
+  "code": "var factory = new TreeTypeFactory();\nvar t1 = factory.Get(\"소나무\");\nvar t2 = factory.Get(\"소나무\");\nvar t3 = factory.Get(\"참나무\");\nConsole.WriteLine($\"같은 객체? {ReferenceEquals(t1, t2)}\");\nConsole.WriteLine($\"만든 종류 수: {factory.Count}\");\n\nrecord TreeType(string Name);\n\nclass TreeTypeFactory\n{\n    readonly Dictionary<string, TreeType> _cache = new();\n    public int Count => _cache.Count;\n\n    public TreeType Get(string name)\n    {\n        if (!_cache.TryGetValue(name, out var type))\n        {\n            type = new TreeType(name);\n            _cache[name] = type;\n        }\n        return type;\n    }\n}\n",
+  "expect": "같은 객체? True\n만든 종류 수: 2\n",
+  "rules": [
+   {
+    "text": "공장이 공유 객체 여러 개를 사전으로 품는다",
+    "relation": {
+     "from": "TreeTypeFactory",
+     "to": "TreeType",
+     "kind": "has"
+    }
+   },
+   {
+    "text": "이미 있으면 다시 꺼낸다 (TryGetValue)",
+    "calls": "TryGetValue"
+   }
+  ]
+ },
+ {
+  "id": "strategy",
+  "cat": "행위",
+  "name": "전략",
+  "en": "Strategy",
+  "when": "계산·정렬·할인 방식을 바꿔 끼우고 싶을 때 (if 를 늘리지 않고)",
+  "idea": "방식마다 클래스를 만들어 같은 인터페이스를 구현하고, 쓰는 쪽은 인터페이스만 품는다.",
+  "code": "var cart = new Cart(new PercentOff(10));\nConsole.WriteLine(cart.Pay(10000));\n\ncart.Discount = new AmountOff(1500);    // 실행 중에 전략 교체\nConsole.WriteLine(cart.Pay(10000));\n\ninterface IDiscount { int Apply(int price); }\n\nclass PercentOff : IDiscount\n{\n    readonly int _rate;\n    public PercentOff(int rate) { _rate = rate; }\n    public int Apply(int price) => price * (100 - _rate) / 100;\n}\n\nclass AmountOff : IDiscount\n{\n    readonly int _amount;\n    public AmountOff(int amount) { _amount = amount; }\n    public int Apply(int price) => price - _amount;\n}\n\nclass Cart\n{\n    public IDiscount Discount { get; set; }\n    public Cart(IDiscount discount) { Discount = discount; }\n    public int Pay(int price) => Discount.Apply(price);\n}\n",
+  "expect": "9000\n8500\n",
+  "rules": [
+   {
+    "text": "구현 클래스가 2개 이상인 인터페이스 (전략들)",
+    "count": {
+     "kind": "interface",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "전략을 인터페이스 타입으로 품고 쓰는 클래스",
+    "count": {
+     "kind": "concrete",
+     "has": "IDiscount"
+    }
+   },
+   {
+    "text": "방식을 if·switch 로 나누지 않음",
+    "uses": "if",
+    "max": 0
+   }
+  ]
+ },
+ {
+  "id": "observer",
+  "cat": "행위",
+  "name": "옵저버",
+  "en": "Observer",
+  "when": "한 곳의 변화를 여러 곳(UI·소리·업적 …)에 알려야 할 때",
+  "idea": "알리는 쪽은 event 를 두고, 듣는 쪽이 += 로 구독한다. 서로를 몰라도 된다.",
+  "code": "var hp = new Health();\nhp.Changed += value => Console.WriteLine($\"UI: 체력 {value}\");\nhp.Changed += value => { if (value == 0) Console.WriteLine(\"게임 오버\"); };\n\nhp.Damage(60);\nhp.Damage(60);\n\nclass Health\n{\n    int _value = 100;\n    public event Action<int> Changed;\n\n    public void Damage(int amount)\n    {\n        _value = Math.Max(0, _value - amount);\n        Changed?.Invoke(_value);    // 누가 듣는지 모른 채 알리기만\n    }\n}\n",
+  "expect": "UI: 체력 40\nUI: 체력 0\n게임 오버\n",
+  "rules": [
+   {
+    "text": "event 선언",
+    "uses": "event"
+   },
+   {
+    "text": "구독자 2개 이상 (람다로 +=)",
+    "uses": "lambda",
+    "min": 2
+   },
+   {
+    "text": "알림 보내기 (Invoke)",
+    "calls": "Invoke"
+   }
+  ]
+ },
+ {
+  "id": "command",
+  "cat": "행위",
+  "name": "커맨드",
+  "en": "Command",
+  "when": "실행 취소(Ctrl+Z)·작업 기록·나중에 실행하기가 필요할 때",
+  "idea": "할 일 하나를 객체로 만들고(Execute/Undo), 기록을 스택에 쌓는다.",
+  "code": "var doc = new Document();\nvar history = new Stack<ICommand>();\n\nvoid Run(ICommand c) { c.Execute(); history.Push(c); }\n\nRun(new Append(doc, \"가\"));\nRun(new Append(doc, \"나\"));\nConsole.WriteLine(doc.Text);\n\nhistory.Pop().Undo();       // 실행 취소\nConsole.WriteLine(doc.Text);\n\ninterface ICommand\n{\n    void Execute();\n    void Undo();\n}\n\nclass Document { public string Text = \"\"; }\n\nclass Append : ICommand\n{\n    readonly Document _doc;\n    readonly string _text;\n    public Append(Document doc, string text) { _doc = doc; _text = text; }\n    public void Execute() => _doc.Text += _text;\n    public void Undo() => _doc.Text = _doc.Text[..^_text.Length];\n}\n",
+  "expect": "가나\n가\n",
+  "rules": [
+   {
+    "text": "Execute·Undo 를 가진 명령 인터페이스",
+    "count": {
+     "kind": "interface",
+     "member": "Undo"
+    }
+   },
+   {
+    "text": "명령 구현 클래스",
+    "count": {
+     "implements": "ICommand"
+    }
+   },
+   {
+    "text": "기록에서 꺼내 되돌리기 (Pop)",
+    "calls": "Pop"
+   }
+  ]
+ },
+ {
+  "id": "state",
+  "cat": "행위",
+  "name": "상태",
+  "en": "State",
+  "when": "상태에 따라 같은 행동이 다르게 동작할 때 (문 열림/닫힘, 캐릭터 걷기/점프 …)",
+  "idea": "상태마다 클래스를 만들고, 상태가 다음 상태를 돌려준다. if 덩어리가 사라진다.",
+  "code": "var door = new Door();\ndoor.Push();\ndoor.Push();\ndoor.Push();\n\ninterface IDoorState\n{\n    string Name { get; }\n    IDoorState Push();     // 눌렀을 때 다음 상태\n}\n\nclass Closed : IDoorState\n{\n    public string Name => \"닫힘\";\n    public IDoorState Push() => new Opened();\n}\n\nclass Opened : IDoorState\n{\n    public string Name => \"열림\";\n    public IDoorState Push() => new Closed();\n}\n\nclass Door\n{\n    IDoorState _state = new Closed();\n    public void Push()\n    {\n        _state = _state.Push();\n        Console.WriteLine(\"문: \" + _state.Name);\n    }\n}\n",
+  "expect": "문: 열림\n문: 닫힘\n문: 열림\n",
+  "rules": [
+   {
+    "text": "상태 클래스 2개 이상이 구현한 인터페이스",
+    "count": {
+     "kind": "interface",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "현재 상태를 품은 클래스",
+    "count": {
+     "has": "IDoorState",
+     "kind": "concrete"
+    }
+   },
+   {
+    "text": "상태를 if·switch 로 나누지 않음",
+    "uses": "if",
+    "max": 0
+   }
+  ]
+ },
+ {
+  "id": "template-method",
+  "cat": "행위",
+  "name": "템플릿 메서드",
+  "en": "Template Method",
+  "when": "순서는 같고 일부 단계만 다를 때 (차·커피 만들기, 게임 한 판 흐름 …)",
+  "idea": "부모가 전체 순서를 정하고, 달라지는 단계만 abstract 로 비워 자식이 채운다.",
+  "code": "new Tea().Make();\nnew Coffee().Make();\n\nabstract class Drink\n{\n    public void Make()          // 순서는 부모가 정한다\n    {\n        Console.WriteLine(\"물 끓이기\");\n        Brew();\n        Console.WriteLine(\"컵에 따르기\");\n    }\n    protected abstract void Brew();   // 이 단계만 자식이\n}\n\nclass Tea : Drink { protected override void Brew() => Console.WriteLine(\"- 찻잎 우리기\"); }\nclass Coffee : Drink { protected override void Brew() => Console.WriteLine(\"- 원두 내리기\"); }\n",
+  "expect": "물 끓이기\n- 찻잎 우리기\n컵에 따르기\n물 끓이기\n- 원두 내리기\n컵에 따르기\n",
+  "rules": [
+   {
+    "text": "abstract 단계가 있는 추상 부모",
+    "count": {
+     "kind": "abstract",
+     "abstractMembers": 1
+    }
+   },
+   {
+    "text": "단계를 채운 자식 2개 이상",
+    "count": {
+     "inherits": "Drink"
+    },
+    "min": 2
+   }
+  ]
+ },
+ {
+  "id": "iterator",
+  "cat": "행위",
+  "name": "이터레이터",
+  "en": "Iterator",
+  "when": "모음의 속 구조를 숨기고 하나씩 꺼내 쓰게 할 때 (foreach 가 되게)",
+  "idea": "IEnumerable 을 구현하고 yield return 으로 하나씩 내준다.",
+  "code": "foreach (var n in new Steps(1, 10, 3))\n    Console.Write(n + \" \");\nConsole.WriteLine();\n\nclass Steps : IEnumerable<int>\n{\n    readonly int _from, _to, _step;\n    public Steps(int from, int to, int step) { _from = from; _to = to; _step = step; }\n\n    public IEnumerator<int> GetEnumerator()\n    {\n        for (int i = _from; i <= _to; i += _step)\n            yield return i;\n    }\n\n    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();\n}\n",
+  "expect": "1 4 7 10 \n",
+  "rules": [
+   {
+    "text": "IEnumerable 구현",
+    "count": {
+     "implements": "IEnumerable"
+    }
+   },
+   {
+    "text": "yield return 으로 하나씩 내주기",
+    "uses": "yield"
+   }
+  ]
+ },
+ {
+  "id": "chain",
+  "cat": "행위",
+  "name": "책임 연쇄",
+  "en": "Chain of Responsibility",
+  "when": "요청을 처리할 수 있는 사람에게 차례로 넘길 때 (결재 라인, 이벤트 전달 …)",
+  "idea": "처리자가 다음 처리자를 품고, 못 하면 다음에게 넘긴다.",
+  "code": "Approver chain = new Staff(new Manager(new Ceo(null)));\nforeach (var amount in new[] { 3, 50, 500, 5000 })\n    Console.WriteLine(chain.Handle(amount));\n\nabstract class Approver\n{\n    readonly Approver _next;\n    protected Approver(Approver next) { _next = next; }\n\n    public string Handle(int amount)\n    {\n        if (CanApprove(amount)) return $\"{Title}: {amount}만원 승인\";\n        return _next?.Handle(amount) ?? $\"{amount}만원은 아무도 승인 못함\";\n    }\n\n    protected abstract bool CanApprove(int amount);\n    protected abstract string Title { get; }\n}\n\nclass Staff : Approver\n{\n    public Staff(Approver next) : base(next) { }\n    protected override bool CanApprove(int a) => a < 10;\n    protected override string Title => \"사원\";\n}\n\nclass Manager : Approver\n{\n    public Manager(Approver next) : base(next) { }\n    protected override bool CanApprove(int a) => a < 100;\n    protected override string Title => \"팀장\";\n}\n\nclass Ceo : Approver\n{\n    public Ceo(Approver next) : base(next) { }\n    protected override bool CanApprove(int a) => a < 1000;\n    protected override string Title => \"사장\";\n}\n",
+  "expect": "사원: 3만원 승인\n팀장: 50만원 승인\n사장: 500만원 승인\n5000만원은 아무도 승인 못함\n",
+  "rules": [
+   {
+    "text": "다음 처리자(자기 타입)를 품은 부모",
+    "count": {
+     "kind": "abstract",
+     "has": "self"
+    }
+   },
+   {
+    "text": "처리자 3개 이상",
+    "count": {
+     "inherits": "Approver"
+    },
+    "min": 3
+   }
+  ]
+ },
+ {
+  "id": "mediator",
+  "cat": "행위",
+  "name": "중재자",
+  "en": "Mediator",
+  "when": "여러 객체가 서로를 직접 부르면 거미줄이 될 때 (채팅방, 관제탑 …)",
+  "idea": "모두가 중재자 하나만 알고, 중재자가 대신 전달한다.",
+  "code": "var room = new ChatRoom();\nvar minsu = new User(\"민수\", room);\nvar jia = new User(\"지아\", room);\nvar hajun = new User(\"하준\", room);\n\nminsu.Say(\"안녕!\");\n\nclass ChatRoom\n{\n    readonly List<User> _users = new();\n    public void Join(User u) => _users.Add(u);\n    public void Send(User from, string message)\n    {\n        foreach (var u in _users)\n            if (u != from) u.Receive(from.Name, message);\n    }\n}\n\nclass User\n{\n    public string Name { get; }\n    readonly ChatRoom _room;\n    public User(string name, ChatRoom room) { Name = name; _room = room; room.Join(this); }\n    public void Say(string message) => _room.Send(this, message);\n    public void Receive(string from, string message) => Console.WriteLine($\"{Name} ← {from}: {message}\");\n}\n",
+  "expect": "지아 ← 민수: 안녕!\n하준 ← 민수: 안녕!\n",
+  "rules": [
+   {
+    "text": "중재자가 참여자 여러 명을 품는다",
+    "relation": {
+     "from": "ChatRoom",
+     "to": "User",
+     "kind": "has"
+    }
+   },
+   {
+    "text": "참여자는 중재자만 안다",
+    "relation": {
+     "from": "User",
+     "to": "ChatRoom",
+     "kind": "has"
+    }
+   },
+   {
+    "text": "참여자끼리 직접 품지 않는다",
+    "relation": {
+     "from": "User",
+     "to": "User",
+     "kind": "has"
+    },
+    "max": 0
+   }
+  ]
+ },
+ {
+  "id": "memento",
+  "cat": "행위",
+  "name": "메멘토",
+  "en": "Memento",
+  "when": "되돌리기·저장 지점(세이브)을 만들 때, 속을 드러내지 않고",
+  "idea": "원본이 자기 상태를 담은 기념품(메멘토)을 만들어 주고, 나중에 그걸로 복원한다.",
+  "code": "var editor = new Editor { Text = \"초안\" };\nvar save = editor.Save();\n\neditor.Text = \"망친 글\";\nConsole.WriteLine(editor.Text);\n\neditor.Restore(save);\nConsole.WriteLine(editor.Text);\n\nrecord Memento(string Text);\n\nclass Editor\n{\n    public string Text { get; set; } = \"\";\n    public Memento Save() => new Memento(Text);\n    public void Restore(Memento m) => Text = m.Text;\n}\n",
+  "expect": "망친 글\n초안\n",
+  "rules": [
+   {
+    "text": "상태만 담는 메멘토(record)",
+    "count": {
+     "kind": "record"
+    }
+   },
+   {
+    "text": "원본이 메멘토를 만든다 (Save)",
+    "relation": {
+     "from": "Editor",
+     "to": "Memento",
+     "kind": "creates"
+    }
+   },
+   {
+    "text": "저장·복원 메서드",
+    "count": {
+     "name": "Editor",
+     "member": "Restore"
+    }
+   }
+  ]
+ },
+ {
+  "id": "visitor",
+  "cat": "행위",
+  "name": "방문자",
+  "en": "Visitor",
+  "when": "도형 종류는 그대로 두고 새 기능(넓이·그리기·저장)을 계속 더할 때",
+  "idea": "도형마다 Accept(visitor) 로 자기 종류에 맞는 Visit 를 불러 준다(이중 디스패치). C# 은 switch 패턴 매칭으로도 쓴다.",
+  "code": "Shape[] shapes = { new Square(2), new Circle(1) };\n\nvar area = new AreaVisitor();\nforeach (var s in shapes) s.Accept(area);\nConsole.WriteLine($\"방문자: {area.Total:F2}\");\n\n// 같은 일을 패턴 매칭으로\ndouble Area(Shape s) => s switch\n{\n    Square q => q.Side * q.Side,\n    Circle c => Math.PI * c.Radius * c.Radius,\n    _ => 0,\n};\nConsole.WriteLine($\"패턴 매칭: {shapes.Sum(Area):F2}\");\n\ninterface IShapeVisitor\n{\n    void Visit(Square s);\n    void Visit(Circle c);\n}\n\nabstract record Shape { public abstract void Accept(IShapeVisitor v); }\nrecord Square(double Side) : Shape { public override void Accept(IShapeVisitor v) => v.Visit(this); }\nrecord Circle(double Radius) : Shape { public override void Accept(IShapeVisitor v) => v.Visit(this); }\n\nclass AreaVisitor : IShapeVisitor\n{\n    public double Total { get; private set; }\n    public void Visit(Square s) => Total += s.Side * s.Side;\n    public void Visit(Circle c) => Total += Math.PI * c.Radius * c.Radius;\n}\n",
+  "expect": "방문자: 7.14\n패턴 매칭: 7.14\n",
+  "rules": [
+   {
+    "text": "Visit 를 가진 방문자 인터페이스",
+    "count": {
+     "kind": "interface",
+     "member": "Visit"
+    }
+   },
+   {
+    "text": "Accept 를 가진 타입 2개 이상",
+    "count": {
+     "member": "Accept"
+    },
+    "min": 2
+   },
+   {
+    "text": "방문자 구현",
+    "count": {
+     "implements": "IShapeVisitor"
+    }
+   }
+  ]
+ },
+ {
+  "id": "di",
+  "cat": "설계",
+  "name": "의존성 주입",
+  "en": "Dependency Injection",
+  "when": "테스트용 가짜로 바꿔 끼우거나, 저장소(DB·파일)를 나중에 바꾸고 싶을 때",
+  "idea": "필요한 것을 안에서 new 하지 말고, 인터페이스로 생성자에서 받는다.",
+  "code": "var service = new OrderService(new FakeRepository());   // 실제 DB 대신 가짜\nservice.Place(\"롱소드\");\n\ninterface IRepository { void Save(string item); }\n\nclass FakeRepository : IRepository\n{\n    public void Save(string item) => Console.WriteLine(\"(가짜) 저장: \" + item);\n}\n\nclass OrderService\n{\n    readonly IRepository _repo;\n    public OrderService(IRepository repo) { _repo = repo; }   // 주입\n    public void Place(string item) => _repo.Save(item);\n}\n",
+  "expect": "(가짜) 저장: 롱소드\n",
+  "rules": [
+   {
+    "text": "인터페이스로 받아 품는다",
+    "count": {
+     "name": "OrderService",
+     "has": "IRepository"
+    }
+   },
+   {
+    "text": "구체 클래스를 직접 new 하지 않는다",
+    "relation": {
+     "from": "OrderService",
+     "kind": "creates"
+    },
+    "max": 0
+   }
+  ]
+ },
+ {
+  "id": "reflection-factory",
+  "cat": "설계",
+  "name": "리플렉션 팩토리",
+  "en": "Reflection Factory",
+  "when": "타입 이름(문자열·설정 파일)으로 객체를 만들 때 — 플러그인, 데이터로 정하는 유닛",
+  "idea": "Type.GetType 으로 타입을 찾고 Activator.CreateInstance 로 만든다.",
+  "code": "foreach (var name in new[] { \"Knight\", \"Archer\" })\n{\n    var type = Type.GetType(name);\n    var unit = (IUnit)Activator.CreateInstance(type);\n    Console.WriteLine($\"{name}: {unit.Attack()}\");\n}\n\ninterface IUnit { string Attack(); }\nclass Knight : IUnit { public string Attack() => \"베기\"; }\nclass Archer : IUnit { public string Attack() => \"활쏘기\"; }\n",
+  "expect": "Knight: 베기\nArcher: 활쏘기\n",
+  "rules": [
+   {
+    "text": "이름으로 만들기 (Activator.CreateInstance)",
+    "calls": "CreateInstance"
+   },
+   {
+    "text": "같은 인터페이스를 구현한 유닛 2개 이상",
+    "count": {
+     "name": "IUnit",
+     "subtypes": 2
+    }
+   }
+  ]
+ }
+]

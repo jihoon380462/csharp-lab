@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Unity 시뮬레이터</title>
+  <link rel="stylesheet" href="../../lab.css" />
+  <link rel="stylesheet" href="../shared/labs.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <a class="logo" href="../../" title="실험실로">C#</a>
+      <div>
+        <h1>Unity 시뮬레이터</h1>
+        <p class="sub">MonoBehaviour · Start · Update 를 브라우저에서 · <span id="ver">-</span></p>
+      </div>
+    </div>
+  </header>
+
+  <section class="loader" id="loader" aria-live="polite">
+    <div class="loader-row"><span id="loaderText">엔진 내려받는 중…</span><span id="loaderPct">0%</span></div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </section>
+
+  <nav class="examples" id="examples" aria-label="예제"></nav>
+  <p class="ex-desc" id="exDesc" hidden></p>
+
+  <main class="layout">
+    <section class="panel editor-panel">
+      <div class="panel-head"><span>Player.cs</span><span class="hint">Ctrl+Enter 실행</span></div>
+      <div class="editor" id="editorHost"></div>
+      <div id="symbar"></div>
+      <div class="livecheck" id="liveCheck"></div>
+      <div class="btn-row">
+        <button class="run" id="playBtn" disabled><span class="run-icon">▶</span><span id="playLabel">엔진 준비 중…</span></button>
+        <button class="ghost" id="testBtn" type="button" title="입력 없이 60프레임을 빠르게 돌려 Debug.Log 출력만 확인 (채점용 모드)">⏩ 60프레임</button>
+      </div>
+    </section>
+
+    <section class="panel out-panel">
+      <div class="panel-head"><span>Game</span><span class="status" id="status"></span></div>
+      <div class="stage">
+        <canvas id="stage" width="800" height="500" tabindex="0" aria-label="게임 화면 (누르면 키보드 입력)"></canvas>
+        <div class="hud" id="hud"></div>
+      </div>
+      <div class="keypad" id="keypad">
+        <button class="k-up" data-key="UpArrow" aria-label="위">▲</button>
+        <button class="k-left" data-key="LeftArrow" aria-label="왼쪽">◀</button>
+        <button class="k-down" data-key="DownArrow" aria-label="아래">▼</button>
+        <button class="k-right" data-key="RightArrow" aria-label="오른쪽">▶</button>
+        <span class="k-hint">PC: 화면을 누르고 방향키·스페이스</span>
+        <button class="k-space" data-key="Space">Space</button>
+      </div>
+      <div class="panel-head"><span>Console</span><button class="ghost" id="clearBtn" type="button" style="height:26px;font-size:12px">지우기</button></div>
+      <div class="output console" id="output"><p class="placeholder">Debug.Log 출력이 여기에 나옵니다.</p></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    실제 Unity 와 다른 점: 2D 화면만(z 무시), 물리·충돌 없음, 그림 대신 모양(<code>GetComponent&lt;SpriteRenderer&gt;().shape</code>),
+    MonoBehaviour 클래스마다 오브젝트가 하나씩 자동으로 생김(<code>[Prefab]</code> 붙이면 제외), Update 에서 오류가 나면 실행을 멈춤.
+  </footer>
+
+  <script type="module" src="unity.js"></script>
+</body>
+</html>

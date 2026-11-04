@@ -1,0 +1,101 @@
+commit: 9523530ddf0b3be17c23012c47e85a193b0fc92f
+built: 2026-11-04T03:46:12Z
+tests: success
+
+## 원본 크기 (_framework)
+42M	out/wwwroot/_framework
+
+## gzip 전송 크기 합계 (*.gz)
+9.1 MB
+
+## brotli 전송 크기 합계 (*.br)
+6.8 MB
+
+## 큰 파일 상위 15개 (gzip 기준)
+   2.24 MB  out/wwwroot/_framework/Microsoft.CodeAnalysis.CSharp.plp00xfrc3.wasm.gz
+   1.44 MB  out/wwwroot/_framework/System.Private.CoreLib.qrnod0ynb1.wasm.gz
+   1.15 MB  out/wwwroot/_framework/dotnet.native.a6k1euv12n.wasm.gz
+   1.05 MB  out/wwwroot/_framework/Microsoft.CodeAnalysis.wnup1m8047.wasm.gz
+   0.49 MB  out/wwwroot/_framework/System.Text.Encoding.CodePages.5d7npblnyd.wasm.gz
+   0.47 MB  out/wwwroot/_framework/CsEngine.pdrmz337iu.wasm.gz
+   0.34 MB  out/wwwroot/_framework/icudt_CJK.tjcz0u77k5.dat.gz
+   0.33 MB  out/wwwroot/_framework/icudt_no_CJK.lfu7j35m59.dat.gz
+   0.21 MB  out/wwwroot/_framework/icudt_EFIGS.tptq2av103.dat.gz
+   0.19 MB  out/wwwroot/_framework/System.Private.Xml.sbvkj03d6r.wasm.gz
+   0.15 MB  out/wwwroot/_framework/System.Text.RegularExpressions.7x9psy84dk.wasm.gz
+   0.11 MB  out/wwwroot/_framework/System.Reflection.Metadata.ruhn6o8553.wasm.gz
+   0.11 MB  out/wwwroot/_framework/ko/Microsoft.CodeAnalysis.CSharp.resources.998gjfe8qz.wasm.gz
+   0.08 MB  out/wwwroot/_framework/System.Text.Json.37fc6zi9x7.wasm.gz
+   0.07 MB  out/wwwroot/_framework/System.Linq.3ize76yjx5.wasm.gz
+
+## _framework 파일 목록
+total 41304
+drwxr-xr-x 3 runner runner   20480 Nov  4 03:46 .
+drwxr-xr-x 5 runner runner    4096 Nov  4 03:46 ..
+-rw-r--r-- 1 runner runner 1444629 Nov  4 03:45 CsEngine.pdrmz337iu.wasm
+-rw-r--r-- 1 runner runner 6620441 Nov  4 03:45 Microsoft.CodeAnalysis.CSharp.plp00xfrc3.wasm
+-rw-r--r-- 1 runner runner 2981657 Nov  4 03:45 Microsoft.CodeAnalysis.wnup1m8047.wasm
+-rw-r--r-- 1 runner runner   68885 Nov  4 03:45 System.Collections.Concurrent.xe1cywxs91.wasm
+-rw-r--r-- 1 runner runner  124693 Nov  4 03:45 System.Collections.Immutable.llijjm6pnw.wasm
+-rw-r--r-- 1 runner runner    8469 Nov  4 03:45 System.Collections.NonGeneric.0vo7b0koib.wasm
+-rw-r--r-- 1 runner runner   12053 Nov  4 03:45 System.Collections.Specialized.6ap9w37eqd.wasm
+-rw-r--r-- 1 runner runner   95509 Nov  4 03:45 System.Collections.sbzrojyg67.wasm
+-rw-r--r-- 1 runner runner    7957 Nov  4 03:45 System.ComponentModel.Primitives.1utiv52zhg.wasm
+-rw-r--r-- 1 runner runner   84757 Nov  4 03:45 System.ComponentModel.TypeConverter.6yf338ktwk.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.ComponentModel.g3pwvcjcrg.wasm
+-rw-r--r-- 1 runner runner   35093 Nov  4 03:45 System.Console.j3u1iqpf8t.wasm
+-rw-r--r-- 1 runner runner   82709 Nov  4 03:45 System.Diagnostics.DiagnosticSource.r7n50axw3r.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Diagnostics.StackTrace.fr8avqiyhm.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Diagnostics.Tracing.seiexb2bbc.wasm
+-rw-r--r-- 1 runner runner    4373 Nov  4 03:45 System.Globalization.g6fz03jrc7.wasm
+-rw-r--r-- 1 runner runner   27413 Nov  4 03:45 System.IO.Compression.oox54d3ufe.wasm
+-rw-r--r-- 1 runner runner   25877 Nov  4 03:45 System.IO.MemoryMappedFiles.vo1qcdj3pw.wasm
+-rw-r--r-- 1 runner runner    5909 Nov  4 03:45 System.IO.Pipelines.ytwui0yf9y.wasm
+-rw-r--r-- 1 runner runner  185109 Nov  4 03:45 System.Linq.3ize76yjx5.wasm
+-rw-r--r-- 1 runner runner   30997 Nov  4 03:45 System.Linq.Expressions.dai8c7q1tt.wasm
+-rw-r--r-- 1 runner runner   41749 Nov  4 03:45 System.Memory.n8jyyy6je8.wasm
+-rw-r--r-- 1 runner runner  144661 Nov  4 03:45 System.Net.Http.hnlavicn6d.wasm
+-rw-r--r-- 1 runner runner    7445 Nov  4 03:45 System.Net.Primitives.q0v81vgq8d.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Numerics.Vectors.qq7xr4xwaf.wasm
+-rw-r--r-- 1 runner runner   26901 Nov  4 03:45 System.ObjectModel.vf5itasyxl.wasm
+-rw-r--r-- 1 runner runner 4552473 Nov  4 03:45 System.Private.CoreLib.qrnod0ynb1.wasm
+-rw-r--r-- 1 runner runner   69909 Nov  4 03:45 System.Private.Uri.s6c12fkqeb.wasm
+-rw-r--r-- 1 runner runner   45845 Nov  4 03:45 System.Private.Xml.Linq.5i0vs9jfmv.wasm
+-rw-r--r-- 1 runner runner  609045 Nov  4 03:45 System.Private.Xml.sbvkj03d6r.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Reflection.Emit.ILGeneration.cum1dxbtau.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Reflection.Emit.Lightweight.bj2uzyyheu.wasm
+-rw-r--r-- 1 runner runner  275221 Nov  4 03:45 System.Reflection.Metadata.ruhn6o8553.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Reflection.Primitives.kli9tc974m.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Resources.Writer.fhwjnfumzv.wasm
+-rw-r--r-- 1 runner runner   34581 Nov  4 03:45 System.Runtime.2d47k8gi7m.wasm
+-rw-r--r-- 1 runner runner    6933 Nov  4 03:45 System.Runtime.Extensions.gsqpi5ip2k.wasm
+-rw-r--r-- 1 runner runner    9493 Nov  4 03:45 System.Runtime.InteropServices.1qtnc98iuz.wasm
+-rw-r--r-- 1 runner runner   43285 Nov  4 03:45 System.Runtime.InteropServices.JavaScript.8htu76y6kx.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Runtime.Intrinsics.vcu2x1oikh.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Runtime.Loader.vqwdbffr8g.wasm
+-rw-r--r-- 1 runner runner  130325 Nov  4 03:45 System.Runtime.Numerics.9duiyvydb1.wasm
+-rw-r--r-- 1 runner runner    6933 Nov  4 03:45 System.Runtime.Serialization.Formatters.kskl2r4uhq.wasm
+-rw-r--r-- 1 runner runner    5909 Nov  4 03:45 System.Runtime.Serialization.Primitives.bkf838g4xu.wasm
+-rw-r--r-- 1 runner runner   13589 Nov  4 03:45 System.Security.Claims.vcizlp4fr2.wasm
+-rw-r--r-- 1 runner runner   24341 Nov  4 03:45 System.Security.Cryptography.fzt5owuch1.wasm
+-rw-r--r-- 1 runner runner  702229 Nov  4 03:45 System.Text.Encoding.CodePages.5d7npblnyd.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Text.Encoding.Extensions.ossad590l5.wasm
+-rw-r--r-- 1 runner runner   29461 Nov  4 03:45 System.Text.Encodings.Web.0fy3awp0bx.wasm
+-rw-r--r-- 1 runner runner  218389 Nov  4 03:45 System.Text.Json.37fc6zi9x7.wasm
+-rw-r--r-- 1 runner runner  364309 Nov  4 03:45 System.Text.RegularExpressions.7x9psy84dk.wasm
+-rw-r--r-- 1 runner runner   14613 Nov  4 03:45 System.Threading.Tasks.Parallel.s40sse3maj.wasm
+-rw-r--r-- 1 runner runner    5909 Nov  4 03:45 System.Threading.Tasks.o8jw6j2f74.wasm
+-rw-r--r-- 1 runner runner   26389 Nov  4 03:45 System.Threading.troerafzuo.wasm
+-rw-r--r-- 1 runner runner    4373 Nov  4 03:45 System.Xml.Linq.h1uux8jz0h.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Xml.ReaderWriter.ct6wt1x0xz.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Xml.XDocument.0054o4ix2w.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.Xml.XPath.XDocument.l5fwsewy6m.wasm
+-rw-r--r-- 1 runner runner    4885 Nov  4 03:45 System.a3z5tpzyvn.wasm
+-rw-r--r-- 1 runner runner   55743 Nov  4 03:45 dotnet.js
+-rwxr--r-- 1 runner runner 3001771 Oct 22 22:35 dotnet.native.a6k1euv12n.wasm
+-rwxr--r-- 1 runner runner  145050 Oct 22 22:35 dotnet.native.bjoj0wmylw.js
+-rwxr--r-- 1 runner runner  198480 Oct 22 22:34 dotnet.runtime.5nc8i5dl74.js
+-rwxr--r-- 1 runner runner  956416 Sep  7 11:02 icudt_CJK.tjcz0u77k5.dat
+-rwxr--r-- 1 runner runner  550832 Sep  7 11:02 icudt_EFIGS.tptq2av103.dat
+-rwxr--r-- 1 runner runner 1107168 Sep  7 11:02 icudt_no_CJK.lfu7j35m59.dat
+drwxr-xr-x 2 runner runner    4096 Nov  4 03:46 ko
