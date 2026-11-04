@@ -11,7 +11,9 @@ const FREE = {
   id: "free", cat: "자유", name: "직접 그려보기", en: "Playground",
   when: "아무 클래스나 써 보세요. 다이어그램이 바로 그려집니다.",
   idea: "interface · abstract class · 상속(:) · 필드 · new 가 선으로 나타나요.",
-  code: `interface IAnimal { string Sound(); }
+  code: `new Zoo().Concert();   // 최상위 문장은 클래스보다 위에
+
+interface IAnimal { string Sound(); }
 
 abstract class Animal : IAnimal
 {
@@ -31,8 +33,6 @@ class Zoo
     readonly List<IAnimal> _animals = new() { new Dog() };
     public void Concert() { foreach (var a in _animals) Console.WriteLine(a.Sound()); }
 }
-
-new Zoo().Concert();
 `,
   expect: null,
   rules: [],

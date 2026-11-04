@@ -75,6 +75,26 @@ function check(e, r) {
   return { p, soft };
 }
 
+function checkAnalyze(e, r) {
+  const p = [];
+  if (!r) return ["결과 없음"];
+  if (e.status && e.status !== r.status) p.push(`status ${r.status} != ${e.status}`);
+  const names = (r.types || []).map((t) => t.name);
+  if (e.typesExact && JSON.stringify([...names].sort()) !== JSON.stringify([...e.typesExact].sort())) p.push(`types ${JSON.stringify(names)}`);
+  const has = (f, k, t) => (r.relations || []).some((x) => x.from === f && x.kind === k && x.to === t);
+  for (const [f, k, t] of e.relations || []) if (!has(f, k, t)) p.push(`관계 없음 ${f} ${k} ${t}`);
+  for (const [f, k, t] of e.noRelations || []) if (has(f, k, t)) p.push(`있으면 안 됨 ${f} ${k} ${t}`);
+  if (e.rulesPassed !== undefined && r.rulesPassed !== e.rulesPassed) p.push(`rulesPassed ${r.rulesPassed} != ${e.rulesPassed}`);
+  for (const [k, v] of Object.entries(e.features || {})) if ((r.features[k] || 0) !== v) p.push(`features.${k} ${r.features[k] || 0} != ${v}`);
+  for (const [k, v] of Object.entries(e.calls || {})) if ((r.calls[k] || 0) !== v) p.push(`calls.${k} ${r.calls[k] || 0} != ${v}`);
+  for (const [t, ms] of Object.entries(e.members || {})) {
+    const tm = (r.types || []).find((x) => x.name === t);
+    for (const m of ms) if (!tm || !tm.members.some((x) => x.name === m)) p.push(`${t} 에 ${m} 없음`);
+  }
+  for (const [t, b] of Object.entries(e.baseTypes || {})) { const tm = (r.types || []).find((x) => x.name === t); if (!tm || tm.baseType !== b) p.push(`baseType ${t}`); }
+  return p;
+}
+
 function checkGrade(e, r) {
   const p = [];
   if (e.status && e.status !== r.status) p.push(`status ${r.status} != ${e.status}`);
@@ -211,8 +231,9 @@ async function newPage(errors, tag) {
         if (c.kind === "grade") return e.grade(c.files, c.tests);
         if (c.kind === "check") return e.check(c.files, c.mode || "console");
         if (c.kind === "unity") return e.runUnity(c.code, c.options);
+        if (c.kind === "analyze") return e.analyze(c.files, c.rules || null, c.mode || "console");
       }, c);
-      const probs = c.kind === "grade" ? checkGrade(c.expect, r) : check(c.expect, r).p.concat(check(c.expect, r).soft.filter((x) => c.expect.errorLine && x.startsWith("errorLine")));
+      const probs = c.kind === "analyze" ? checkAnalyze(c.expect, r) : c.kind === "grade" ? checkGrade(c.expect, r) : check(c.expect, r).p.concat(check(c.expect, r).soft.filter((x) => c.expect.errorLine && x.startsWith("errorLine")));
       if (probs.length) fails++;
       report.cases.push({ id: "api:" + c.id, ok: !probs.length, problems: probs });
       console.log(`${probs.length ? "FAIL" : "PASS"} api:${c.id}${probs.length ? " :: " + probs.join("; ") + "\n   " + JSON.stringify(r).slice(0, 600) : ""}`);
@@ -300,10 +321,10 @@ async function newPage(errors, tag) {
           }
           const nan = d.edges.some((e) => /NaN|undefined/.test(e.d));
           const svgBoxes = document.querySelectorAll("#diagram .box").length;
-          return { id, status: a.status, types: a.types.length, boxes: bx.length, svgBoxes, overlap, nan, rules: a.rulesPassed + "/" + a.rulesTotal, allRules: a.rulesPassed === a.rulesTotal, ms: a.ms, edges: d.edges.length };
+          return { id, status: a.status, types: a.types.length, boxes: bx.length, svgBoxes, overlap, nan, rules: a.rulesPassed + "/" + a.rulesTotal, allRules: a.rulesPassed === a.rulesTotal, ms: a.ms, edges: d.edges.length, relations: a.relations.length };
         }, id);
         maxMs = Math.max(maxMs, res.ms || 0);
-        const ok = !res.err && res.status === "ok" && res.types === res.boxes && res.svgBoxes === res.boxes && res.overlap === 0 && !res.nan && res.allRules && (id === "free" || res.edges > 0);
+        const ok = !res.err && res.status === "ok" && res.types === res.boxes && res.svgBoxes === res.boxes && res.overlap === 0 && !res.nan && res.allRules && (res.relations === 0 || res.edges > 0);
         if (!ok) bad.push(JSON.stringify(res));
         if (["strategy", "visitor", "composite", "mediator"].includes(id)) await pp.screenshot(`${SHOTS}/15-pattern-${id}.png`, true);
       }
@@ -332,6 +353,9 @@ async function newPage(errors, tag) {
       await pp.screenshot(`${SHOTS}/16-pattern-if-version.png`, true);
       // 입력 중 다이어그램 갱신: 클래스 하나 추가 → 상자 늘어남
       const grow = await pp.eval(async () => {
+        // if 버전 입력 뒤의 분석이 끝날 때까지 기다린 다음 센다
+        window.__lab.lastAnalyze = null;
+        for (let i = 0; i < 100 && !window.__lab.lastAnalyze; i++) await new Promise((r) => setTimeout(r, 50));
         const before = document.querySelectorAll("#diagram .box").length;
         const ed = window.__lab.editor; window.__lab.lastAnalyze = null;
         ed.value = ed.value + "\nclass Coupon : IDiscountX { }\ninterface IDiscountX { }\n"; ed.textarea.dispatchEvent(new Event("input"));

@@ -2,7 +2,7 @@
 //
 //   import { renderClassDiagram } from "/csharp-lab/core/class-diagram.js";
 //   const r = await engine.analyze(code);
-//   const d = renderClassDiagram(hostDiv, r, { onSelect: (type) => editor.selectLine(type.line), members: true });
+//   const d = renderClassDiagram(hostDiv, r, { onSelect: (type) => editor.selectLine(type.line) });   // members: "auto" | true | false
 //   d.boxes  → [{ name, x, y, w, h }]   (검사용)
 //
 // 배치: 부모(상속·구현 대상)가 위, 자식이 아래. 계층에 안 걸린 타입은 자기를 품는(has·creates) 타입 아래로.
@@ -27,8 +27,10 @@ const COLORS = {
 const EDGE = { inherits: "#cfc6e6", implements: "#b07cf0", has: "#6d9cf2", creates: "#69c27a", uses: "#6f6789" };
 const PRIORITY = { inherits: 5, implements: 5, has: 3, creates: 2, uses: 1 };
 
-const FONT = '12px "D2Coding","Cascadia Code",Consolas,"SF Mono",ui-monospace,Menlo,monospace';
-const FONT_B = 'bold 13px "D2Coding","Cascadia Code",Consolas,"SF Mono",ui-monospace,Menlo,monospace';
+// 주의: style="font:..." 속성 안에 들어가므로 글꼴 이름은 작은따옴표로 (큰따옴표면 속성이 끊겨 글꼴이 안 먹음)
+const FAMILY = "'D2Coding','Cascadia Code',Consolas,'SF Mono',ui-monospace,Menlo,monospace";
+const FONT = "12px " + FAMILY;
+const FONT_B = "bold 13px " + FAMILY;
 const PAD = 10, LINE = 16, HEAD = 22, GAP_X = 34, GAP_Y = 64, MAX_MEMBERS = 9, MAX_CHARS = 40;
 
 let cssInjected = false;
@@ -142,7 +144,24 @@ function clipToBox(b, px, py) {
   return [cx + dx * s, cy + dy * s];
 }
 
+/**
+ * opts.members: true(멤버 보이기) · false(이름만) · "auto"(기본: 화면에 다 들어가면 멤버까지, 넘치면 이름만)
+ * opts.onSelect(type): 상자를 눌렀을 때 · opts.minWidth: 이보다 좁게 줄이지 않고 가로 스크롤(기본 560)
+ */
 export function renderClassDiagram(host, model, opts = {}) {
+  const mode = opts.members === undefined ? "auto" : opts.members;
+  if (mode !== "auto") return renderOnce(host, model, opts, !!mode);
+  const full = renderOnce(host, model, opts, true);
+  const avail = host.clientWidth;
+  if (avail > 0 && full.width > avail + 8) {
+    const slim = renderOnce(host, model, { ...opts, minWidth: Math.min(opts.minWidth || 560, avail) }, false);
+    slim.compact = true;
+    return slim;
+  }
+  return full;
+}
+
+function renderOnce(host, model, opts, showMembers) {
   if (!cssInjected) {
     cssInjected = true;
     const st = document.createElement("style");
@@ -156,7 +175,6 @@ export function renderClassDiagram(host, model, opts = {}) {
     host.innerHTML = `<div class="empty">${esc(opts.emptyText || "클래스·인터페이스가 아직 없어요")}</div>`;
     return { boxes: [], edges: [], width: 0, height: 0 };
   }
-  const showMembers = opts.members !== false;
   const uid = "ccd" + Math.random().toString(36).slice(2, 8);
 
   // 상자 크기
@@ -199,6 +217,11 @@ export function renderClassDiagram(host, model, opts = {}) {
     const cur = pairs.get(key);
     if (!cur || PRIORITY[r.kind] > PRIORITY[cur.kind] || (PRIORITY[r.kind] === PRIORITY[cur.kind] && r.many && !cur.many)) pairs.set(key, r);
   }
+  // 상속·구현이 이미 있는 쌍의 「사용」 선은 군더더기라 뺀다 (가짐·생성은 남김: 컴포지트처럼 의미가 있음)
+  for (const [key, r] of [...pairs]) {
+    if (r.kind !== "uses" || r.from === r.to) continue;
+    if (pairs.has([r.from, r.to].sort().join("\u0000") + "\u0000h")) pairs.delete(key);
+  }
   // 양방향(서로 품음)이면 선을 조금 벌린다
   const drawn = [...pairs.values()];
   const dirCount = new Map();
@@ -208,6 +231,12 @@ export function renderClassDiagram(host, model, opts = {}) {
   const into = new Map();
   for (const r of drawn) if (PRIORITY[r.kind] === 5 && r.from !== r.to) (into.get(r.to) || into.set(r.to, []).get(r.to)).push(r);
   for (const [to, list] of into) list.sort((a, b) => (byName.get(a.from).x + byName.get(a.from).w / 2) - (byName.get(b.from).x + byName.get(b.from).w / 2));
+
+  // 부모(선이 들어오는 상자)마다 가로 선 차선 번호
+  const laneOf = new Map();
+  const parentsByRow = new Map();
+  for (const name of into.keys()) { const b = byName.get(name); (parentsByRow.get(b.y) || parentsByRow.set(b.y, []).get(b.y)).push(b); }
+  for (const list of parentsByRow.values()) { list.sort((p, q) => p.x - q.x); list.forEach((b, i) => laneOf.set(b.name, [i, list.length])); }
 
   const edges = [];
   let svgEdges = "";
@@ -227,7 +256,9 @@ export function renderClassDiagram(host, model, opts = {}) {
       const k = list.indexOf(r), cnt = list.length;
       const tx = b.x + b.w * (k + 1) / (cnt + 1);
       const sx = a.x + a.w / 2, sy = a.y, ty = b.y + b.h;
-      const my = (sy + ty) / 2;
+      // 부모마다 가로 선 높이를 달리해서 겹치지 않게 (같은 줄 부모들 사이에서 차례로)
+      const lane = laneOf.get(r.to) || [0, 1];
+      const my = ty + 12 + (sy - ty - 24) * (lane[1] > 1 ? lane[0] / (lane[1] - 1) : 0.5);
       d = `M${sx} ${sy} L${sx} ${my} L${tx} ${my} L${tx} ${ty}`;
       lx = (sx + tx) / 2; ly = my;
     } else {
@@ -286,7 +317,9 @@ export function renderClassDiagram(host, model, opts = {}) {
       if (t) opts.onSelect(t);
     }));
   }
-  return { boxes: boxes.map((b) => ({ name: b.name, x: b.x, y: b.y, w: b.w, h: b.h })), edges, width: W, height: H };
+  // 넓어서 가로 스크롤이 생기면 가운데부터 보이게
+  if (host.scrollWidth > host.clientWidth) host.scrollLeft = (host.scrollWidth - host.clientWidth) / 2;
+  return { boxes: boxes.map((b) => ({ name: b.name, x: b.x, y: b.y, w: b.w, h: b.h })), edges, width: W, height: H, members: showMembers };
 }
 
 /** 범례 HTML (다이어그램 아래에 붙이기) */
