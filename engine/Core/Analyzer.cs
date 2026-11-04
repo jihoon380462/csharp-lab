@@ -20,7 +20,8 @@ public static partial class Engine
         var all = WithLibraries(files, m);
         var trees = all.Select(Parse).ToList();
         var compilation = MakeCompilation(m, trees.Append(GuardTree));
-        var result = new AnalyzeResult { Diagnostics = CollectDiagnostics(compilation, trees, all, m) };
+        // 구조만 보므로 「Main 없음(CS5001)」은 오류로 치지 않는다 (클래스만 있는 코드도 그릴 수 있게)
+        var result = new AnalyzeResult { Diagnostics = CollectDiagnostics(compilation, trees, all, m).Where(d => d.Id != "CS5001").ToList() };
         result.Status = result.Diagnostics.Any(d => d.Severity == "error") ? "compile-error" : "ok";
         var userTrees = trees.Where(t => t.FilePath != UnityLibName).ToList();
         StructureAnalyzer.Fill(compilation, userTrees, result);

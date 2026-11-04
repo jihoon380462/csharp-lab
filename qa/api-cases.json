@@ -557,5 +557,56 @@
     "IB"
    ]
   }
+ },
+ {
+  "id": "unity-pattern-pool",
+  "kind": "unity",
+  "code": "using UnityEngine;\n\npublic class Spawner : MonoBehaviour\n{\n    readonly Queue<GameObject> pool = new Queue<GameObject>();\n    float timer;\n    int created;\n\n    void Start()\n    {\n        for (int i = 0; i < 5; i++) pool.Enqueue(Make());\n        Debug.Log(\"미리 5개 만들어 둠\");\n    }\n\n    GameObject Make()\n    {\n        var go = new GameObject(\"별\" + (++created));\n        go.AddComponent<Star>().spawner = this;\n        go.SetActive(false);\n        return go;\n    }\n\n    void Update()\n    {\n        timer += Time.deltaTime;\n        if (timer > 0.25f)\n        {\n            timer = 0;\n            var go = pool.Count > 0 ? pool.Dequeue() : Make();   // 꺼내 쓰기 (모자랄 때만 새로)\n            go.transform.position = new Vector3(Random.Range(-7f, 7f), 5.5f, 0);\n            go.SetActive(true);\n        }\n        if (Time.frameCount % 120 == 0) Debug.Log($\"{Time.frameCount}프레임: 만든 개수 {created}, 대기 중 {pool.Count}\");\n    }\n\n    public void Return(GameObject go)   // 돌려놓기\n    {\n        go.SetActive(false);\n        pool.Enqueue(go);\n    }\n}\n\n[Prefab]\npublic class Star : MonoBehaviour\n{\n    public Spawner spawner;\n\n    void Start()\n    {\n        var r = GetComponent<SpriteRenderer>();\n        r.shape = Shape.Circle;\n        r.color = Color.yellow;\n        transform.localScale = new Vector3(0.4f, 0.4f, 1);\n    }\n\n    void Update()\n    {\n        transform.Translate(0, -6f * Time.deltaTime, 0, Space.World);\n        if (transform.position.y < -5.5f) spawner.Return(gameObject);\n    }\n}",
+  "options": {
+   "frames": 400
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "미리 5개 만들어 둠\n120프레임: 만든 개수 7, 대기 중 0\n240프레임: 만든 개수 7, 대기 중 0\n360프레임: 만든 개수 7, 대기 중 0\n"
+  }
+ },
+ {
+  "id": "unity-pattern-fsm",
+  "kind": "unity",
+  "code": "using UnityEngine;\n\npublic class Guard : MonoBehaviour\n{\n    enum State { Patrol, Chase, Return }\n\n    State state;\n    Transform player;\n    readonly Vector3 home = new Vector3(0, 2, 0);\n    float dir = 1;\n\n    void Start()\n    {\n        player = GameObject.Find(\"Player\").transform;\n        transform.position = home;\n        GetComponent<SpriteRenderer>().shape = Shape.Circle;\n        Change(State.Patrol);\n    }\n\n    void Change(State next)\n    {\n        state = next;\n        Debug.Log(\"경비병 상태 → \" + next);\n        GetComponent<SpriteRenderer>().color =\n            next == State.Chase ? Color.red : next == State.Return ? Color.yellow : Color.green;\n    }\n\n    void Update()\n    {\n        float dist = Vector3.Distance(transform.position, player.position);\n        switch (state)\n        {\n            case State.Patrol:\n                transform.position += Vector3.right * dir * 2f * Time.deltaTime;\n                if (Mathf.Abs(transform.position.x) > 4) dir = -dir;\n                if (dist < 3) Change(State.Chase);\n                break;\n\n            case State.Chase:\n                transform.position = Vector3.MoveTowards(transform.position, player.position, 2.5f * Time.deltaTime);\n                if (dist > 5) Change(State.Return);\n                break;\n\n            case State.Return:\n                transform.position = Vector3.MoveTowards(transform.position, home, 2f * Time.deltaTime);\n                if (dist < 3) Change(State.Chase);\n                else if (Vector3.Distance(transform.position, home) < 0.05f) Change(State.Patrol);\n                break;\n        }\n    }\n}\n\npublic class Player : MonoBehaviour\n{\n    void Start()\n    {\n        GetComponent<SpriteRenderer>().color = Color.cyan;\n        transform.position = new Vector3(0, -3.5f, 0);\n    }\n\n    void Update()\n    {\n        var move = new Vector3(Input.GetAxis(\"Horizontal\"), Input.GetAxis(\"Vertical\"), 0);\n        transform.position += move * 5f * Time.deltaTime;\n    }\n}",
+  "options": {
+   "frames": 300,
+   "inputScript": "0-49:UpArrow;120-299:DownArrow"
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "경비병 상태 → Patrol\n경비병 상태 → Chase\n경비병 상태 → Return\n"
+  }
+ },
+ {
+  "id": "unity-pattern-bus",
+  "kind": "unity",
+  "code": "using UnityEngine;\n\n// 모두가 아는 게시판: 보내는 쪽과 듣는 쪽이 서로를 몰라도 된다\npublic static class GameEvents\n{\n    public static event System.Action<int> ScoreChanged;\n    public static event System.Action GameOver;\n\n    public static void RaiseScore(int total) => ScoreChanged?.Invoke(total);\n    public static void RaiseGameOver() => GameOver?.Invoke();\n}\n\npublic class Coin : MonoBehaviour      // 보내는 쪽\n{\n    int score;\n    bool over;\n\n    void Start()\n    {\n        var r = GetComponent<SpriteRenderer>();\n        r.shape = Shape.Circle;\n        r.color = Color.yellow;\n    }\n\n    void Update()\n    {\n        if (over || !Input.GetKeyDown(KeyCode.Space)) return;\n        score += 10;\n        transform.localScale = Vector3.one * (1 + score / 50f);\n        GameEvents.RaiseScore(score);\n        if (score >= 50) { over = true; GameEvents.RaiseGameOver(); }\n    }\n}\n\npublic class ScoreUI : MonoBehaviour   // 듣는 쪽 1\n{\n    void Awake()\n    {\n        GetComponent<SpriteRenderer>().enabled = false;\n        GameEvents.ScoreChanged += s => Debug.Log(\"[UI] 점수 \" + s);\n        GameEvents.GameOver += () => Debug.Log(\"[UI] 게임 끝!\");\n    }\n}\n\npublic class SoundPlayer : MonoBehaviour   // 듣는 쪽 2\n{\n    void Awake()\n    {\n        GetComponent<SpriteRenderer>().enabled = false;\n        GameEvents.ScoreChanged += OnScore;\n    }\n\n    void OnScore(int s)\n    {\n        if (s % 30 == 0) Debug.Log(\"[소리] 띠링~ 보너스\");\n    }\n}",
+  "options": {
+   "frames": 12,
+   "inputScript": "1:Space;3:Space;5:Space;7:Space;9:Space;11:Space"
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "[UI] 점수 10\n[UI] 점수 20\n[UI] 점수 30\n[소리] 띠링~ 보너스\n[UI] 점수 40\n[UI] 점수 50\n[UI] 게임 끝!\n"
+  }
+ },
+ {
+  "id": "unity-pattern-components",
+  "kind": "unity",
+  "code": "using UnityEngine;\n\npublic class Game : MonoBehaviour   // 장면을 부품으로 조립\n{\n    void Start()\n    {\n        GetComponent<SpriteRenderer>().enabled = false;\n\n        var hero = new GameObject(\"용사\");\n        hero.GetComponent<SpriteRenderer>().color = Color.cyan;\n        hero.AddComponent<Health>().max = 3;\n        hero.AddComponent<Mover>().speed = 4;\n        hero.AddComponent<Attacker>();\n\n        var rock = new GameObject(\"바위\");\n        rock.transform.position = new Vector3(3, 0, 0);\n        rock.GetComponent<SpriteRenderer>().color = Color.gray;\n        rock.AddComponent<Health>().max = 2;\n        rock.AddComponent<Blink>();\n    }\n}\n\n[Prefab] public class Health : MonoBehaviour\n{\n    public int max = 3;\n    int hp;\n\n    void Start() { hp = max; }\n\n    public void Hit()\n    {\n        hp--;\n        Debug.Log($\"{name} 체력 {hp}/{max}\");\n        var blink = GetComponent<Blink>();\n        if (blink) blink.Flash();               // 깜빡임 부품이 있으면\n        if (hp <= 0) { Debug.Log($\"{name} 부서짐!\"); Destroy(gameObject); }\n    }\n}\n\n[Prefab] public class Mover : MonoBehaviour\n{\n    public float speed = 3;\n\n    void Update()\n    {\n        var move = new Vector3(Input.GetAxis(\"Horizontal\"), Input.GetAxis(\"Vertical\"), 0);\n        transform.position += move * speed * Time.deltaTime;\n    }\n}\n\n[Prefab] public class Attacker : MonoBehaviour\n{\n    void Update()\n    {\n        if (!Input.GetKeyDown(KeyCode.Space)) return;\n        foreach (var target in Object.FindObjectsOfType<Health>())\n        {\n            if (target.gameObject == gameObject) continue;\n            if (Vector3.Distance(target.transform.position, transform.position) < 1.5f) target.Hit();\n        }\n    }\n}\n\n[Prefab] public class Blink : MonoBehaviour\n{\n    float timeLeft;\n    Color baseColor;\n\n    void Start() { baseColor = GetComponent<SpriteRenderer>().color; }\n    public void Flash() { timeLeft = 0.3f; }\n\n    void Update()\n    {\n        timeLeft -= Time.deltaTime;\n        GetComponent<SpriteRenderer>().color = timeLeft > 0 ? Color.red : baseColor;\n    }\n}",
+  "options": {
+   "frames": 120,
+   "inputScript": "0-29:RightArrow;40:Space;50:Space;60:Space"
+  },
+  "expect": {
+   "status": "ok",
+   "stdoutEquals": "바위 체력 1/2\n바위 체력 0/2\n바위 부서짐!\n"
+  }
  }
 ]

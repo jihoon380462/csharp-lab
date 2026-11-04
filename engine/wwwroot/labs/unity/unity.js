@@ -179,6 +179,279 @@ public class Enemy : MonoBehaviour
     }
 }`,
   },
+  {
+    id: "pool", label: "패턴: 오브젝트 풀", desc: "오브젝트 풀 — 매번 new/Destroy 하지 않고, 미리 만든 오브젝트를 꺼내 쓰고(SetActive true) 다 쓰면 돌려놓는다(false). 만든 개수가 더 늘지 않는 걸 콘솔에서 확인하세요.",
+    code: `using UnityEngine;
+
+public class Spawner : MonoBehaviour
+{
+    readonly Queue<GameObject> pool = new Queue<GameObject>();
+    float timer;
+    int created;
+
+    void Start()
+    {
+        for (int i = 0; i < 5; i++) pool.Enqueue(Make());
+        Debug.Log("미리 5개 만들어 둠");
+    }
+
+    GameObject Make()
+    {
+        var go = new GameObject("별" + (++created));
+        go.AddComponent<Star>().spawner = this;
+        go.SetActive(false);
+        return go;
+    }
+
+    void Update()
+    {
+        timer += Time.deltaTime;
+        if (timer > 0.25f)
+        {
+            timer = 0;
+            var go = pool.Count > 0 ? pool.Dequeue() : Make();   // 꺼내 쓰기 (모자랄 때만 새로)
+            go.transform.position = new Vector3(Random.Range(-7f, 7f), 5.5f, 0);
+            go.SetActive(true);
+        }
+        if (Time.frameCount % 120 == 0) Debug.Log($"{Time.frameCount}프레임: 만든 개수 {created}, 대기 중 {pool.Count}");
+    }
+
+    public void Return(GameObject go)   // 돌려놓기
+    {
+        go.SetActive(false);
+        pool.Enqueue(go);
+    }
+}
+
+[Prefab]
+public class Star : MonoBehaviour
+{
+    public Spawner spawner;
+
+    void Start()
+    {
+        var r = GetComponent<SpriteRenderer>();
+        r.shape = Shape.Circle;
+        r.color = Color.yellow;
+        transform.localScale = new Vector3(0.4f, 0.4f, 1);
+    }
+
+    void Update()
+    {
+        transform.Translate(0, -6f * Time.deltaTime, 0, Space.World);
+        if (transform.position.y < -5.5f) spawner.Return(gameObject);
+    }
+}`,
+  },
+  {
+    id: "fsm", label: "패턴: 상태 머신", desc: "상태 머신 — 경비병이 순찰 → (플레이어가 가까우면) 추격 → (멀어지면) 복귀 상태를 오간다. 상태마다 할 일을 switch 로 나누고, 바뀔 때만 Change 를 부른다. 방향키로 가까이 가 보세요.",
+    code: `using UnityEngine;
+
+public class Guard : MonoBehaviour
+{
+    enum State { Patrol, Chase, Return }
+
+    State state;
+    Transform player;
+    readonly Vector3 home = new Vector3(0, 2, 0);
+    float dir = 1;
+
+    void Start()
+    {
+        player = GameObject.Find("Player").transform;
+        transform.position = home;
+        GetComponent<SpriteRenderer>().shape = Shape.Circle;
+        Change(State.Patrol);
+    }
+
+    void Change(State next)
+    {
+        state = next;
+        Debug.Log("경비병 상태 → " + next);
+        GetComponent<SpriteRenderer>().color =
+            next == State.Chase ? Color.red : next == State.Return ? Color.yellow : Color.green;
+    }
+
+    void Update()
+    {
+        float dist = Vector3.Distance(transform.position, player.position);
+        switch (state)
+        {
+            case State.Patrol:
+                transform.position += Vector3.right * dir * 2f * Time.deltaTime;
+                if (Mathf.Abs(transform.position.x) > 4) dir = -dir;
+                if (dist < 3) Change(State.Chase);
+                break;
+
+            case State.Chase:
+                transform.position = Vector3.MoveTowards(transform.position, player.position, 2.5f * Time.deltaTime);
+                if (dist > 5) Change(State.Return);
+                break;
+
+            case State.Return:
+                transform.position = Vector3.MoveTowards(transform.position, home, 2f * Time.deltaTime);
+                if (dist < 3) Change(State.Chase);
+                else if (Vector3.Distance(transform.position, home) < 0.05f) Change(State.Patrol);
+                break;
+        }
+    }
+}
+
+public class Player : MonoBehaviour
+{
+    void Start()
+    {
+        GetComponent<SpriteRenderer>().color = Color.cyan;
+        transform.position = new Vector3(0, -3.5f, 0);
+    }
+
+    void Update()
+    {
+        var move = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"), 0);
+        transform.position += move * 5f * Time.deltaTime;
+    }
+}`,
+  },
+  {
+    id: "bus", label: "패턴: 이벤트 버스", desc: "이벤트 버스 — 점수를 올리는 쪽(Coin)은 누가 듣는지 모른 채 GameEvents 로 알리기만 하고, UI·소리가 따로 구독한다. Space 를 눌러 보세요(50점이면 끝).",
+    code: `using UnityEngine;
+
+// 모두가 아는 게시판: 보내는 쪽과 듣는 쪽이 서로를 몰라도 된다
+public static class GameEvents
+{
+    public static event System.Action<int> ScoreChanged;
+    public static event System.Action GameOver;
+
+    public static void RaiseScore(int total) => ScoreChanged?.Invoke(total);
+    public static void RaiseGameOver() => GameOver?.Invoke();
+}
+
+public class Coin : MonoBehaviour      // 보내는 쪽
+{
+    int score;
+    bool over;
+
+    void Start()
+    {
+        var r = GetComponent<SpriteRenderer>();
+        r.shape = Shape.Circle;
+        r.color = Color.yellow;
+    }
+
+    void Update()
+    {
+        if (over || !Input.GetKeyDown(KeyCode.Space)) return;
+        score += 10;
+        transform.localScale = Vector3.one * (1 + score / 50f);
+        GameEvents.RaiseScore(score);
+        if (score >= 50) { over = true; GameEvents.RaiseGameOver(); }
+    }
+}
+
+public class ScoreUI : MonoBehaviour   // 듣는 쪽 1
+{
+    void Awake()
+    {
+        GetComponent<SpriteRenderer>().enabled = false;
+        GameEvents.ScoreChanged += s => Debug.Log("[UI] 점수 " + s);
+        GameEvents.GameOver += () => Debug.Log("[UI] 게임 끝!");
+    }
+}
+
+public class SoundPlayer : MonoBehaviour   // 듣는 쪽 2
+{
+    void Awake()
+    {
+        GetComponent<SpriteRenderer>().enabled = false;
+        GameEvents.ScoreChanged += OnScore;
+    }
+
+    void OnScore(int s)
+    {
+        if (s % 30 == 0) Debug.Log("[소리] 띠링~ 보너스");
+    }
+}`,
+  },
+  {
+    id: "components", label: "패턴: 컴포넌트 조립", desc: "컴포넌트 패턴 — 큰 클래스 하나 대신 작은 부품(체력·이동·공격·깜빡임)을 만들어 오브젝트마다 골라 붙인다. 같은 Health·Blink 를 용사와 바위가 함께 쓴다. 방향키로 바위 옆에 가서 Space.",
+    code: `using UnityEngine;
+
+public class Game : MonoBehaviour   // 장면을 부품으로 조립
+{
+    void Start()
+    {
+        GetComponent<SpriteRenderer>().enabled = false;
+
+        var hero = new GameObject("용사");
+        hero.GetComponent<SpriteRenderer>().color = Color.cyan;
+        hero.AddComponent<Health>().max = 3;
+        hero.AddComponent<Mover>().speed = 4;
+        hero.AddComponent<Attacker>();
+
+        var rock = new GameObject("바위");
+        rock.transform.position = new Vector3(3, 0, 0);
+        rock.GetComponent<SpriteRenderer>().color = Color.gray;
+        rock.AddComponent<Health>().max = 2;
+        rock.AddComponent<Blink>();
+    }
+}
+
+[Prefab] public class Health : MonoBehaviour
+{
+    public int max = 3;
+    int hp;
+
+    void Start() { hp = max; }
+
+    public void Hit()
+    {
+        hp--;
+        Debug.Log($"{name} 체력 {hp}/{max}");
+        var blink = GetComponent<Blink>();
+        if (blink) blink.Flash();               // 깜빡임 부품이 있으면
+        if (hp <= 0) { Debug.Log($"{name} 부서짐!"); Destroy(gameObject); }
+    }
+}
+
+[Prefab] public class Mover : MonoBehaviour
+{
+    public float speed = 3;
+
+    void Update()
+    {
+        var move = new Vector3(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"), 0);
+        transform.position += move * speed * Time.deltaTime;
+    }
+}
+
+[Prefab] public class Attacker : MonoBehaviour
+{
+    void Update()
+    {
+        if (!Input.GetKeyDown(KeyCode.Space)) return;
+        foreach (var target in Object.FindObjectsOfType<Health>())
+        {
+            if (target.gameObject == gameObject) continue;
+            if (Vector3.Distance(target.transform.position, transform.position) < 1.5f) target.Hit();
+        }
+    }
+}
+
+[Prefab] public class Blink : MonoBehaviour
+{
+    float timeLeft;
+    Color baseColor;
+
+    void Start() { baseColor = GetComponent<SpriteRenderer>().color; }
+    public void Flash() { timeLeft = 0.3f; }
+
+    void Update()
+    {
+        timeLeft -= Time.deltaTime;
+        GetComponent<SpriteRenderer>().color = timeLeft > 0 ? Color.red : baseColor;
+    }
+}`,
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -384,6 +657,8 @@ function showResult(r, quick) {
 function loadExample(ex) {
   if (playing) engine.stop();
   editor.value = ex.code;
+  $("exDesc").textContent = ex.desc || "";
+  $("exDesc").hidden = !ex.desc;
   scene = [];
   $("examples").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.id === ex.id));
   scheduleCheck();

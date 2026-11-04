@@ -276,6 +276,78 @@ async function newPage(errors, tag) {
       await gp.close();
     }
 
+    // ── 디자인 패턴 페이지: 패턴마다 구조 체크 전부 통과 + 다이어그램 겹침 없음 ──
+    {
+      const pp = await newPage(errors, "patterns");
+      await pp.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+      await pp.send("Page.navigate", { url: base + "labs/patterns/" });
+      await pp.waitFor(() => window.__lab && window.__lab.ready && window.__lab.patterns && window.__lab.lastAnalyze, 120000);
+      const ids = await pp.eval(() => window.__lab.patterns.map((p) => p.id));
+      const bad = [];
+      let maxMs = 0;
+      for (const id of ids) {
+        const res = await pp.eval(async (id) => {
+          window.__lab.lastAnalyze = null;
+          const sel = document.getElementById("patternSel"); sel.value = id; sel.dispatchEvent(new Event("change"));
+          for (let i = 0; i < 100 && !window.__lab.lastAnalyze; i++) await new Promise((r) => setTimeout(r, 50));
+          const a = window.__lab.lastAnalyze, d = window.__lab.lastDiagram;
+          if (!a || !d) return { id, err: "분석 없음" };
+          const bx = d.boxes;
+          let overlap = 0;
+          for (let i = 0; i < bx.length; i++) for (let j = i + 1; j < bx.length; j++) {
+            const p = bx[i], q = bx[j];
+            if (p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h) overlap++;
+          }
+          const nan = d.edges.some((e) => /NaN|undefined/.test(e.d));
+          const svgBoxes = document.querySelectorAll("#diagram .box").length;
+          return { id, status: a.status, types: a.types.length, boxes: bx.length, svgBoxes, overlap, nan, rules: a.rulesPassed + "/" + a.rulesTotal, allRules: a.rulesPassed === a.rulesTotal, ms: a.ms, edges: d.edges.length };
+        }, id);
+        maxMs = Math.max(maxMs, res.ms || 0);
+        const ok = !res.err && res.status === "ok" && res.types === res.boxes && res.svgBoxes === res.boxes && res.overlap === 0 && !res.nan && res.allRules && (id === "free" || res.edges > 0);
+        if (!ok) bad.push(JSON.stringify(res));
+        if (["strategy", "visitor", "composite", "mediator"].includes(id)) await pp.screenshot(`${SHOTS}/15-pattern-${id}.png`, true);
+      }
+      mark(bad.length === 0, `패턴 ${ids.length}개: 분석 성공·구조 체크 전부 통과·다이어그램 상자 겹침 없음`, bad.join(" | ").slice(0, 900) || `분석 최대 ${maxMs}ms`);
+      report.timings.analyzeMaxMs = maxMs;
+
+      // 채점: 전략 정답 → 출력·구조 모두 통과 / if 로 바꾼 버전 → 출력은 같아도 구조 실패
+      const g1 = await pp.eval(async () => {
+        const sel = document.getElementById("patternSel"); sel.value = "strategy"; sel.dispatchEvent(new Event("change"));
+        await new Promise((r) => setTimeout(r, 300));
+        window.__lab.lastGrade = null; document.getElementById("gradeBtn").click();
+        for (let i = 0; i < 200 && !window.__lab.lastGrade; i++) await new Promise((r) => setTimeout(r, 50));
+        const g = window.__lab.lastGrade;
+        return { out: g.grade.tests[0].passed, rules: g.analyze.rulesPassed + "/" + g.analyze.rulesTotal, text: document.getElementById("status").textContent };
+      });
+      mark(g1.out === true && g1.rules === "3/3" && g1.text === "통과", "패턴 채점: 정답 → 출력·구조 통과", JSON.stringify(g1));
+      const ifVersion = 'var cart = new Cart();\nConsole.WriteLine(cart.Pay(10000, "percent"));\nConsole.WriteLine(cart.Pay(10000, "amount"));\n\nclass Cart\n{\n    public int Pay(int price, string kind)\n    {\n        if (kind == "percent") return price * 90 / 100;\n        return price - 1500;\n    }\n}\n';
+      const g2 = await pp.eval(async (code) => {
+        const ed = window.__lab.editor; ed.value = code; ed.textarea.dispatchEvent(new Event("input"));
+        window.__lab.lastGrade = null; document.getElementById("gradeBtn").click();
+        for (let i = 0; i < 200 && !window.__lab.lastGrade; i++) await new Promise((r) => setTimeout(r, 50));
+        const g = window.__lab.lastGrade;
+        return { out: g.grade.tests[0].passed, rules: g.analyze.rulesPassed + "/" + g.analyze.rulesTotal, marks: [...document.querySelectorAll("#rules li.no")].length };
+      }, ifVersion);
+      mark(g2.out === true && g2.rules === "0/3" && g2.marks === 3, "패턴 채점: if 버전 → 출력은 맞아도 구조 0/3", JSON.stringify(g2));
+      await pp.screenshot(`${SHOTS}/16-pattern-if-version.png`, true);
+      // 입력 중 다이어그램 갱신: 클래스 하나 추가 → 상자 늘어남
+      const grow = await pp.eval(async () => {
+        const before = document.querySelectorAll("#diagram .box").length;
+        const ed = window.__lab.editor; window.__lab.lastAnalyze = null;
+        ed.value = ed.value + "\nclass Coupon : IDiscountX { }\ninterface IDiscountX { }\n"; ed.textarea.dispatchEvent(new Event("input"));
+        for (let i = 0; i < 100 && !window.__lab.lastAnalyze; i++) await new Promise((r) => setTimeout(r, 50));
+        return { before, after: document.querySelectorAll("#diagram .box").length, edges: window.__lab.lastDiagram.edges.length };
+      });
+      mark(grow.after === grow.before + 2 && grow.edges >= 1, "입력하면 다이어그램이 바로 바뀜", JSON.stringify(grow));
+      // 상자 누르면 그 줄로
+      const sel = await pp.eval(() => {
+        document.querySelector('#diagram .box[data-name="Coupon"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        const t = document.getElementById("code"); return t.value.slice(t.selectionStart, t.selectionEnd);
+      });
+      mark(/class Coupon/.test(sel), "다이어그램 상자 클릭 → 코드 줄 선택", JSON.stringify(sel));
+      await pp.close();
+    }
+
     // ── Unity 시뮬레이터 페이지 ──
     {
       const up = await newPage(errors, "unity");
@@ -338,7 +410,11 @@ async function newPage(errors, tag) {
         }
         return out.join(" ");
       });
-      mark(!/compile-error|runtime-error|internal|stopped/.test(exRes), "Unity: 예제 5개 30프레임 정상", exRes);
+      mark(!/compile-error|runtime-error|internal|stopped/.test(exRes), "Unity: 예제 전부 30프레임 정상", exRes);
+      // 예제 설명 줄 (패턴 예제)
+      const desc = await up.eval(() => { document.querySelector('#examples button[data-id="pool"]').click(); const d = document.getElementById("exDesc"); return !d.hidden && d.textContent; });
+      mark(!!desc && /오브젝트 풀/.test(desc), "Unity: 패턴 예제 설명 표시", String(desc).slice(0, 30));
+      await up.screenshot(`${SHOTS}/14-unity-pattern-desc.png`);
       await up.close();
     }
   }
@@ -401,7 +477,7 @@ async function newPage(errors, tag) {
     await page.close();
 
     // 모바일: 채점·Unity 페이지 화면
-    for (const [name, url] of [["grading", "labs/grading/"], ["unity", "labs/unity/"]]) {
+    for (const [name, url] of [["grading", "labs/grading/"], ["unity", "labs/unity/"], ["patterns", "labs/patterns/?p=visitor"]]) {
       const mp = await newPage(errors, "mobile-" + name);
       await mp.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
       await mp.send("Page.navigate", { url: base + url });

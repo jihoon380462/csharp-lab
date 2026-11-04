@@ -40,3 +40,4 @@ a.logo { text-decoration: none; }
   .keypad { grid-template-columns: repeat(3, 52px) 1fr 96px; }
   .keypad .k-hint { display: none; }
 }
+.ex-desc { max-width: 1200px; margin: -4px auto 12px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; font-size: 13.5px; line-height: 1.6; color: #d8d2e6; }
