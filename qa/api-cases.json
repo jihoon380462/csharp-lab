@@ -336,5 +336,226 @@
    "status": "ok",
    "stdoutEquals": "2\n"
   }
+ },
+ {
+  "id": "analyze-strategy-if-version-fails",
+  "kind": "analyze",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "var cart = new Cart();\nConsole.WriteLine(cart.Pay(10000, \"percent\"));\nclass Cart\n{\n    public int Pay(int price, string kind)\n    {\n        if (kind == \"percent\") return price * 90 / 100;\n        else return price - 1500;\n    }\n}"
+   }
+  ],
+  "rules": [
+   {
+    "text": "구현 클래스가 2개 이상인 인터페이스",
+    "count": {
+     "kind": "interface",
+     "subtypes": 2
+    }
+   },
+   {
+    "text": "전략을 품은 클래스",
+    "count": {
+     "kind": "concrete",
+     "has": "IDiscount"
+    }
+   },
+   {
+    "text": "if 없음",
+    "uses": "if",
+    "max": 0
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "rulesPassed": 0,
+   "features": {
+    "if": 1
+   }
+  }
+ },
+ {
+  "id": "analyze-relations-decorator",
+  "kind": "analyze",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "interface ICoffee { int Cost(); }\nclass Basic : ICoffee { public int Cost() => 3000; }\nabstract class Topping : ICoffee\n{\n    protected readonly ICoffee Inner;\n    protected Topping(ICoffee inner) { Inner = inner; }\n    public abstract int Cost();\n}\nclass Milk : Topping\n{\n    public Milk(ICoffee i) : base(i) { }\n    public override int Cost() => Inner.Cost() + 500;\n}"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "typesExact": [
+    "Basic",
+    "ICoffee",
+    "Milk",
+    "Topping"
+   ],
+   "relations": [
+    [
+     "Basic",
+     "implements",
+     "ICoffee"
+    ],
+    [
+     "Topping",
+     "implements",
+     "ICoffee"
+    ],
+    [
+     "Milk",
+     "inherits",
+     "Topping"
+    ],
+    [
+     "Topping",
+     "has",
+     "ICoffee"
+    ]
+   ],
+   "noRelations": [
+    [
+     "Milk",
+     "has",
+     "ICoffee"
+    ]
+   ],
+   "kinds": {
+    "Topping": "class",
+    "ICoffee": "interface"
+   },
+   "abstract": [
+    "Topping"
+   ]
+  }
+ },
+ {
+  "id": "analyze-features",
+  "kind": "analyze",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "int Fib(int n) => n < 2 ? n : Fib(n - 1) + Fib(n - 2);\nvar xs = new List<int> { 1, 2, 3 }.Where(x => x > 1).ToList();\nforeach (var x in xs) if (x > 2) Console.WriteLine(Fib(x));"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "features": {
+    "recursion": 2,
+    "ternary": 1,
+    "linq": 2,
+    "lambda": 1,
+    "foreach": 1,
+    "if": 1,
+    "new": 1
+   },
+   "calls": {
+    "WriteLine": 1,
+    "Fib": 3
+   }
+  }
+ },
+ {
+  "id": "analyze-primary-ctor-and-record",
+  "kind": "analyze",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "class B { public void Run() { } }\nclass A(B b) { public void Go() => b.Run(); }\nclass C(B b) { B _b = b; }\nclass D(B b) { }\nrecord R(B Item, int Count);\nclass Bag { List<B> items = new(); B[] arr; }"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "relations": [
+    [
+     "A",
+     "has",
+     "B"
+    ],
+    [
+     "C",
+     "has",
+     "B"
+    ],
+    [
+     "R",
+     "has",
+     "B"
+    ],
+    [
+     "Bag",
+     "has",
+     "B"
+    ]
+   ],
+   "noRelations": [
+    [
+     "D",
+     "has",
+     "B"
+    ]
+   ],
+   "members": {
+    "R": [
+     "Item",
+     "Count"
+    ],
+    "C": [
+     "_b"
+    ]
+   },
+   "many": [
+    [
+     "Bag",
+     "B"
+    ]
+   ]
+  }
+ },
+ {
+  "id": "analyze-unity-mode",
+  "kind": "analyze",
+  "mode": "unity",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "public class Player : MonoBehaviour\n{\n    Enemy target;\n    void Update() { transform.position += Vector3.right * Time.deltaTime; }\n}\n[Prefab] public class Enemy : MonoBehaviour { }"
+   }
+  ],
+  "expect": {
+   "status": "ok",
+   "typesExact": [
+    "Enemy",
+    "Player"
+   ],
+   "relations": [
+    [
+     "Player",
+     "has",
+     "Enemy"
+    ]
+   ],
+   "baseTypes": {
+    "Player": "MonoBehaviour"
+   }
+  }
+ },
+ {
+  "id": "analyze-compile-error-still-types",
+  "kind": "analyze",
+  "files": [
+   {
+    "name": "Program.cs",
+    "code": "class A { public int X() => \"글자\"; }\ninterface IB { }"
+   }
+  ],
+  "expect": {
+   "status": "compile-error",
+   "typesExact": [
+    "A",
+    "IB"
+   ]
+  }
  }
 ]

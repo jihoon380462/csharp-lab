@@ -27,7 +27,7 @@ jobs:
       - name: 엔진 테스트 (데스크톱 .NET)
         id: tests
         continue-on-error: true
-        run: dotnet run --project tests/EngineTests -c Release -- qa/cases.json qa/api-cases.json 2>&1 | tee test-result.txt; exit ${PIPESTATUS[0]}
+        run: dotnet run --project tests/EngineTests -c Release -- qa/cases.json qa/api-cases.json engine/wwwroot/labs/patterns/patterns.json 2>&1 | tee test-result.txt; exit ${PIPESTATUS[0]}
 
       - name: 브라우저용 빌드 (Blazor WebAssembly)
         run: dotnet publish engine/CsEngine.csproj -c Release -o out

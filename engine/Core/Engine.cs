@@ -19,9 +19,9 @@ namespace CsEngine;
 /// Core 폴더는 플랫폼과 무관하다: 브라우저에서는 Browser/Exports.cs(JSExport)가 Web Worker 안에서 부르고,
 /// 데스크톱 .NET(tests/EngineTests 등)에서는 Engine.RunAsync 를 직접 부른다. 사용법은 docs/REFERENCE.md 3절.
 /// </summary>
-public static class Engine
+public static partial class Engine
 {
-    public const string EngineVersion = "0.3.0";
+    public const string EngineVersion = "0.4.0";
     public const int TimeLimitMs = 10000;
     public const int MaxDepth = 2000;
     public const int MaxOutputChars = 100_000;
@@ -141,6 +141,7 @@ public static class Engine
     public static string ToJson(RunResult result) => JsonSerializer.Serialize(result, LabJson.Default.RunResult);
     public static string ToJson(GradeResult result) => JsonSerializer.Serialize(result, LabJson.Default.GradeResult);
     public static string ToJson(CheckResult result) => JsonSerializer.Serialize(result, LabJson.Default.CheckResult);
+    public static string ToJson(AnalyzeResult result) => JsonSerializer.Serialize(result, LabJson.Default.AnalyzeResult);
 
     /// <summary>코드(파일 하나, 이름 Program.cs)를 컴파일·실행하고 결과 객체를 돌려준다.</summary>
     public static Task<RunResult> RunAsync(string code, string? stdin = "") =>

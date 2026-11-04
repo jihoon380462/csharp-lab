@@ -6,6 +6,7 @@
 //   await engine.runFiles([{name, code}], stdin)     → RunResult   (여러 파일)
 //   await engine.grade([{name, code}], [{stdin, expect}]) → GradeResult (컴파일 1번, 테스트마다 실행·비교)
 //   await engine.check(codeOrFiles, mode)            → CheckResult (진단만, 실행 안 함 — 입력 중 오류 밑줄용)
+//   await engine.analyze(codeOrFiles, rules, mode)  → AnalyzeResult (구조 분석: 타입·관계·문법 사용 + 구조 규칙 채점)
 //   await engine.runUnity(code, {live, frames, inputScript}) → RunResult (UnityLite 프레임 루프)
 //   engine.setInput(["LeftArrow", "Space"])          (Unity 실시간 모드: 지금 눌린 키)
 //   engine.stop()                                    (실행 중이면 강제 중지 후 엔진 자동 재시작)
@@ -82,6 +83,7 @@ export function createCsEngine(opts = {}) {
     runFiles: (files, stdin = "") => request({ type: "runFiles", files, stdin }),
     grade: (files, tests) => request({ type: "grade", files: asFiles(files), tests }),
     check: (codeOrFiles, mode = "console") => request({ type: "check", files: asFiles(codeOrFiles), mode }, false),
+    analyze: (codeOrFiles, rules = null, mode = "console") => request({ type: "analyze", files: asFiles(codeOrFiles), rules, mode }, false),
     runUnity: (code, options = {}) => request({ type: "runUnity", code, options }),
     setInput: (keys) => { if (worker) worker.postMessage({ type: "input", keys: keys || [] }); },
     stop() {
@@ -90,6 +92,7 @@ export function createCsEngine(opts = {}) {
       for (const [, p] of pending) {
         const runMs = Math.round(performance.now() - p.started);
         if (p.kind === "check") p.resolve({ diagnostics: [], ms: 0, stopped: true });
+        else if (p.kind === "analyze") p.resolve({ status: "stopped-by-user", diagnostics: [], types: [], relations: [], features: {}, calls: {}, rules: [], rulesPassed: 0, rulesTotal: 0, ms: 0, stopped: true });
         else if (p.kind === "grade") p.resolve({ status: "stopped-by-user", diagnostics: [], error: null, tests: [], passed: 0, total: 0, compileMs: 0, totalMs: runMs });
         else p.resolve({ status: "stopped-by-user", stdout: "", diagnostics: [], error: null, compileMs: 0, runMs, totalMs: 0 });
       }

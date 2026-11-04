@@ -56,6 +56,15 @@ public static partial class Exports
         return Engine.ToJson(Engine.Check(files, mode));
     }
 
+    /// <summary>구조 분석 (실행 안 함). rulesJson = [StructureRule] 또는 "" → AnalyzeResult JSON</summary>
+    [JSExport]
+    public static string Analyze(string filesJson, string rulesJson, string mode)
+    {
+        var files = JsonSerializer.Deserialize(filesJson, LabJson.Default.ListSourceFile) ?? new();
+        var rules = string.IsNullOrWhiteSpace(rulesJson) ? null : JsonSerializer.Deserialize(rulesJson, LabJson.Default.ListStructureRule);
+        return Engine.ToJson(Engine.Analyze(files, rules, mode));
+    }
+
     /// <summary>Unity 모드 실행. optionsJson = UnityOptions → RunResult JSON (실시간이면 중지할 때까지 안 끝남)</summary>
     [JSExport]
     public static async Task<string> RunUnity(string code, string optionsJson)

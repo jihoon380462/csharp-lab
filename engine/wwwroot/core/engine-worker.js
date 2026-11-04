@@ -107,11 +107,15 @@ const RUNNERS = {
 self.onmessage = (ev) => {
   const m = ev.data;
   if (m.type === "input") { inputKeys = (m.keys || []).join(","); return; }
-  if (m.type === "check") {
-    // 진단만: 가볍고 동기라서 대기열을 거치지 않는다(실행 중에도 응답)
+  if (m.type === "check" || m.type === "analyze") {
+    // 진단만·구조 분석: 실행이 없고 동기라서 대기열을 거치지 않는다(실행 중에도 응답)
     let json;
-    try { json = api ? api.Check(JSON.stringify(m.files), m.mode || "console") : JSON.stringify({ diagnostics: [], ms: 0, notReady: true }); }
-    catch (e) { json = JSON.stringify({ diagnostics: [], ms: 0, error: String(e) }); }
+    const empty = { diagnostics: [], types: [], relations: [], features: {}, calls: {}, rules: [], rulesPassed: 0, rulesTotal: 0, ms: 0 };
+    try {
+      if (!api) json = JSON.stringify({ ...empty, notReady: true });
+      else if (m.type === "check") json = api.Check(JSON.stringify(m.files), m.mode || "console");
+      else json = api.Analyze(JSON.stringify(m.files), m.rules ? JSON.stringify(m.rules) : "", m.mode || "console");
+    } catch (e) { json = JSON.stringify({ ...empty, error: String(e) }); }
     post({ type: "result", id: m.id, json });
     return;
   }
