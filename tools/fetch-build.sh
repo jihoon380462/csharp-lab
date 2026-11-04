@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 git fetch -q -f origin build-output:refs/remotes/origin/build-output --depth 1
 mkdir -p "$DIR"
 if [ -d "$DIR/csharp-lab/.git" ] || [ -f "$DIR/csharp-lab/.git" ]; then
-  git -C "$DIR/csharp-lab" checkout -q --detach origin/build-output
+  git -C "$DIR/csharp-lab" checkout -q -f --detach origin/build-output   # -f: QA 중 손으로 고친 파일이 있어도 빌드 결과로 덮어씀
 else
   rm -rf "$DIR/csharp-lab"
   git worktree add -q -f --detach "$DIR/csharp-lab" origin/build-output

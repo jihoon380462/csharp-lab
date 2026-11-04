@@ -5,8 +5,9 @@
 
 ## 무엇이 있나
 
-- **브라우저 안 C# 실행 엔진**: .NET 10 WebAssembly + Roslyn 컴파일러, Web Worker 에서 실행. 서버 없음. 실행·여러 파일·일괄 채점·진단만·Unity 모드(UnityLite).
-- **웹 모듈**: 엔진 클라이언트(`core/cs-engine.js`), 편집기(`core/code-editor.js`), 폰 기호 칩(`core/symbol-bar.js`).
+- **브라우저 안 C# 실행 엔진**: .NET 10 WebAssembly + Roslyn 컴파일러, Web Worker 에서 실행. 서버 없음. 실행·여러 파일·일괄 채점·진단만·구조 분석/구조 규칙·Unity 모드(UnityLite).
+- **웹 모듈**: 엔진 클라이언트(`core/cs-engine.js`), 편집기(`core/code-editor.js`), 폰 기호 칩(`core/symbol-bar.js`), 클래스 다이어그램(`core/class-diagram.js`).
+- **예제 자료**: 디자인 패턴 24개(`labs/patterns/patterns.json`, 원본 `tools/data/make_patterns.py`), Unity 게임 패턴 4개(`labs/unity/unity.js`).
   - 주소: https://jihoon380462.github.io/csharp-lab/ (실험실 화면)
 - **검증된 기능 목록**: `FEATURES.md` — ✅ 표시된 것만 다른 프로젝트에 가져다 쓴다. 🧪 는 실험 중.
 - **문서** (`docs/`, 목적별 — 안내는 `docs/README.md`)

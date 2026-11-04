@@ -35,6 +35,10 @@
 | 진단만 (`check`) — 실행 없이 오류·경고, 실행 중에도 응답 | `Core/Engine.cs` (Check), `core/engine-worker.js` (대기열 우회) | api-cases `check-*` 3개, PC 약 15ms | 0.3.0 |
 | 코드 편집기 — 문법 색칠·오류 밑줄·줄 번호 표시·자동 들여쓰기·`{}` 펼침 (라이브러리 없음) | `core/code-editor.js` | 밑줄 위치 오차 0px, 입력 중 밑줄·고치면 사라짐, 블록 펼침 | 0.3.0 |
 | 폰 기호 칩 (짝 기호·커서 가운데·키보드 유지, 마우스 기기면 숨김) | `core/symbol-bar.js` | 모바일 QA: `( )`·`" "` 넣기·커서 위치·포커스 유지 | 0.3.0 |
+| 구조 분석 (`analyze`) — 타입·멤버·관계(상속·구현·가짐·생성·사용)·문법 사용 횟수·호출 횟수, 실행 안 함·대기열 우회 | `Core/Analyzer.cs`, `core/cs-engine.js` | api-cases `analyze-*` 6개 (주 생성자 붙잡음·record·모음·Unity 모드·오류 코드), PC 2~150ms | 0.4.0 |
+| 구조 규칙 채점 — 「구현 2개 이상인 인터페이스」「if 없이」 등 (TypeFilter·relation·uses·calls) | `Core/Analyzer.cs` (Evaluate), 형식 REFERENCE 4-2절 | 패턴 24개 규칙 전부 통과(데스크톱·브라우저), if 버전 전략은 출력 ✓·구조 0/3 | 0.4.0 |
+| 클래스 다이어그램 (계층 배치·UML 선·좁으면 이름만·클릭 → 코드 줄) | `core/class-diagram.js` | 패턴 25개 상자 겹침 0·선 좌표 정상, 입력 즉시 갱신, 상자 클릭 줄 선택, 모바일 가로 넘침 없음 | 0.4.0 |
+| 디자인 패턴 24개 데이터 (GoF 22 + DI + 리플렉션 팩토리: 코드·설명·기대 출력·구조 규칙) | `labs/patterns/patterns.json` ← `tools/data/make_patterns.py` | 데스크톱 테스트에서 매번 출력·규칙 확인 | 0.4.0 |
 | Unity 모드 (UnityLite): MonoBehaviour·Start·Update·Transform·Input·Time·Debug·Vector·Mathf·Random·생성/파괴 | `Core/Libraries/UnityLite.csx`, `Core/Engine.cs` (RunUnityAsync), `labs/unity/` | api-cases `unity-*` 7개(이동·생성/파괴·오류 줄·프레임 시간 초과), 실시간 60fps·화면 버튼·키보드·중지, 예제 5개 | 0.3.0 |
 
 ### 재사용 방법 (다른 페이지에서) — 자세한 건 docs/REFERENCE.md 2·3절
@@ -72,12 +76,14 @@ engine.stop(); // 실행 중지
 | 실험 | 페이지 | 상태 |
 |---|---|---|
 | 채점 화면 (테스트별 표·숨은 테스트) | `labs/grading/` | 엔진 API 는 ✅, 화면은 아카데미용 시제품 |
-| Unity 시뮬레이터 화면 (캔버스·화면 키·콘솔) | `labs/unity/` | 엔진(Unity 모드)은 ✅, 화면은 시제품 |
+| Unity 시뮬레이터 화면 (캔버스·화면 키·콘솔) + 게임 패턴 예제 4개(오브젝트 풀·상태 머신·이벤트 버스·컴포넌트 조립) | `labs/unity/` | 엔진(Unity 모드)은 ✅, 예제 출력은 api-cases `unity-pattern-*` 로 고정, 화면은 시제품 |
+| 디자인 패턴 화면 (선택·설명·편집기·실시간 다이어그램·구조 체크·채점) | `labs/patterns/` | 엔진·다이어그램은 ✅, 화면은 아카데미용 시제품 |
 
 ## 💡 실험 후보
 
-- 정답 검사 도구 `tools/SolutionRunner` (아카데미 CI 용, docs/ACADEMY.md 5절)
-- 구조 검사 채점 (「for 를 썼는가」 등 문법 트리 조건)
+- 정답 검사 도구 `tools/SolutionRunner` (아카데미 CI 용, docs/ACADEMY.md 5절) — 출력 + 구조 규칙
+- 다이어그램: 시퀀스 다이어그램(메서드 호출 순서), 객체 그래프(실행 중 어떤 객체가 누구를 품는지)
+- Unity 모드 구조 규칙 예시 묶음(게임 패턴 문제용)
 - 실행 중 대화형 입력 (Console.ReadLine 이 화면에서 입력을 기다림)
 - 자동 완성 (멤버 목록)
 - 변수 값 추적·한 줄씩 실행 시각화

@@ -28,6 +28,7 @@ const { createCsEngine } = await import("/csharp-lab/core/cs-engine.js");
 | 취소 | `engine.stop()` (Worker 종료 후 자동 재시작) |
 | `grade(submission, problem)` | **`engine.grade(files, tests)`** — 컴파일 1번 + 테스트마다 새로 실행·비교 (2절) |
 | 입력 중 오류 표시 | `engine.check(code)` — 진단만, 수십 ms |
+| 구조 채점·다이어그램 | `engine.analyze(code, rules)` — 타입·관계 + 구조 규칙 결과 (2절, 4-1절) |
 | `reset()` | 없음(실행마다 새로 올림) |
 | `snapshot()` | 마지막 출력 + 진단 목록 |
 
@@ -43,7 +44,7 @@ const { createCsEngine } = await import("/csharp-lab/core/cs-engine.js");
 |---|---|---|
 | 출력형 (프로그램 전체) | 학습자 `Program.cs` 하나 | `{stdin, expect}` |
 | 메서드형 | 학습자 `Solution.cs`(클래스·메서드) + 숨은 `Tests.cs`(최상위 문장으로 입력 읽어 호출·출력) | `{stdin, expect}` |
-| 구조 조건 (「for 를 쓰세요」 등) | — | (후보: 엔진에 문법 트리 검사 추가 필요) |
+| 구조 조건 (「for 를 쓰세요」, 「인터페이스를 구현한 클래스 2개 이상」 등) | 학습자 파일 | `engine.analyze(files, rules)` 의 `rulesPassed === rulesTotal` (v0.4.0) |
 
 - `engine.grade` 결과의 `tests[i].passed` · `stdout` · `error.friendly` 로 테스트별 표를 만든다(실험 페이지 `labs/grading/` 이 예시).
 - 비교 규칙: 줄 끝 공백·마지막 빈 줄 무시(`Engine.NormalizeOutput`).
@@ -72,11 +73,32 @@ const { createCsEngine } = await import("/csharp-lab/core/cs-engine.js");
 | 6 클래스 | C16–C18 | 클래스·생성자, 속성·접근 제한자·`static`, `struct record enum` |
 | 7 객체지향 | C19–C20 | 상속·`virtual/override`, 인터페이스·추상·다형성 |
 | 8 한 걸음 더 | C21–C24 | 예외, LINQ·람다, 제네릭·null, `async/await` |
-| **9 Unity 맛보기** | U1–U4 | `MonoBehaviour`·`Start`·`Update`, `transform`·`Time.deltaTime`, `Input`, 생성·파괴 — **Unity 모드(UnityLite)** 사용, 실험 페이지 `labs/unity/` 가 시제품 |
+| **9 디자인 패턴** | P1–P8 | 4-1절 |
+| **10 Unity 맛보기** | U1–U6 | `MonoBehaviour`·`Start`·`Update`, `transform`·`Time.deltaTime`, `Input`, 생성·파괴, **게임 패턴**(오브젝트 풀·상태 머신·이벤트 버스·컴포넌트 조립) — **Unity 모드(UnityLite)** 사용, 실험 페이지 `labs/unity/` 가 시제품 |
 | 실전 | X1–X3 | 인벤토리, 콘솔 RPG, 퀴즈 게임 |
 
 - 문제 유형: 코드(출력 채점) · 메서드형 · 빈칸 · 버그 고치기 · 퀴즈(「이 코드는 컴파일될까?」 포함) · 타자 연습(비중 크게).
-- Unity 챕터 채점: `engine.runUnity(code, { frames: 60, inputScript: "0-59:RightArrow" })` 로 고정 시간 실행 → `Debug.Log` 출력 비교(결정적). 예: 「60프레임 뒤 x 가 3.00」.
+- Unity 챕터 채점: `engine.runUnity(code, { frames: 60, inputScript: "0-59:RightArrow" })` 로 고정 시간 실행 → `Debug.Log` 출력 비교(결정적). 예: 「60프레임 뒤 x 가 3.00」. 게임 패턴은 Unity 모드 `analyze(code, rules, "unity")` 로 구조도 본다(예: 풀 — `calls:"SetActive"` 2번 이상, `Queue` 로 품음; 상태 머신 — `uses:"switch"` + enum 1개).
+
+### 4-1. 디자인 패턴 챕터 (P1–P8)
+
+챕터 7(객체지향) 다음. 패턴 하나 = 「왜 필요한가(나쁜 코드 먼저)」 → 다이어그램과 함께 읽기 → 고쳐 쓰기 문제. 실험 페이지 `labs/patterns/` 와 `patterns.json`(24개, 코드·기대 출력·구조 규칙)이 그대로 문제 재료다.
+
+| 레슨 | 패턴 | 문제 예 (출력 + 구조) |
+|---|---|---|
+| P1 왜 패턴인가 | — | if 덩어리 할인 계산을 보고 「새 할인이 생기면 어디를 고치나」 퀴즈 |
+| P2 전략 | Strategy | if 버전 → 인터페이스+구현 2개로 바꾸기. 규칙: 구현 2개 이상인 인터페이스, 그 인터페이스를 품은 클래스, `if` 0개 |
+| P3 상태 | State | 문 열림/닫힘을 상태 클래스로. 규칙: 상태 인터페이스 구현 2개, `if` 0개 |
+| P4 옵저버 | Observer (event) | 체력이 바뀌면 UI·소리에 알리기. 규칙: `event` 1, 구독 람다 2 |
+| P5 팩토리·싱글턴 | Factory Method · Singleton | 이름으로 적 만들기 / 설정 하나만. 규칙: 공통 부모 자식 2개, private 생성자 |
+| P6 데코레이터·컴포지트 | Decorator · Composite | 커피 토핑, 폴더 크기. 규칙: 같은 인터페이스를 구현하며 품기 |
+| P7 커맨드 | Command | 실행 취소. 규칙: Execute·Undo 인터페이스, `Pop` 호출 |
+| P8 의존성 주입 | DI | 저장소를 생성자로 받기. 규칙: 인터페이스를 품음, `new` 로 구체 클래스 만들지 않기 |
+
+- **채점 = 출력 + 구조.** 같은 출력이라도 패턴을 안 쓰면 구조 체크에서 떨어진다(v0.4.0 QA: if 버전 전략 → 출력 ✓, 구조 0/3).
+- **화면**: 편집기 옆에 클래스 다이어그램(`core/class-diagram.js`)과 구조 체크 목록을 두고, 입력이 멈추면 0.5초 뒤 둘 다 갱신 → 「선이 생기는 것」이 즉각 보상.
+- 나머지 패턴(어댑터·프록시·퍼사드·브리지·플라이웨이트·빌더·프로토타입·템플릿 메서드·이터레이터·책임 연쇄·중재자·메멘토·방문자·추상 팩토리)은 「패턴 도감」(문제 없이 실행·다이어그램만, 선택)으로.
+- TODO.md T5(객체지향·설계 코스)와 겹친다 → 아카데미 쪽에서 「C# 코스 안 챕터」로 할지 「별도 코스」로 할지 결정 필요.
 
 ## 5. 검증 게이트 (아카데미 CI)
 
@@ -89,7 +111,8 @@ const { createCsEngine } = await import("/csharp-lab/core/cs-engine.js");
 | 단계 | 내용 | 어디서 |
 |---|---|---|
 | L (끝남 v0.3.0) | 여러 파일·일괄 채점·진단만·편집기·기호 칩·Unity 모드 | csharp-lab |
-| L2 | `tools/SolutionRunner`, (선택) 구조 검사 | csharp-lab |
+| L2 (끝남 v0.4.0) | 구조 분석·구조 규칙·클래스 다이어그램·디자인 패턴 24개·Unity 게임 패턴 | csharp-lab |
+| L3 | `tools/SolutionRunner` (출력 + 구조 규칙을 데스크톱에서 검사) | csharp-lab |
 | C0 | 러너 `csharp.js` 연결, 코스 껍데기, 오류 풀이 사전, CI 정답 검사, 레슨 2개 | 아카데미 (그쪽 절차) |
 | C1–C3 | 챕터 콘텐츠 | 아카데미 |
 

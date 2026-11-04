@@ -9,7 +9,7 @@
 - [ ] 브라우저 전용 동작이면 `qa/browser/qa.js` 에 `mark(...)` 추가 — 7절
 - [ ] 결과 모양(REFERENCE 4절)을 **지우거나 바꾸지 않았다** (추가만)
 - [ ] `tools/ship.sh` → CI 데스크톱 테스트 통과 → 브라우저 QA `all` 실패 0 → 스크린샷 눈으로 확인
-- [ ] 버전 올림 + `docs/CHANGELOG.md` — 12절
+- [ ] 버전 올림 + `docs/CHANGELOG.md` — 15절
 - [ ] 검증 끝난 것은 `FEATURES.md` ✅ 표에 — 8절
 - [ ] `tools/deploy.sh`
 
@@ -144,7 +144,26 @@ mark(조건, "항목 이름", 상세문자열);
 4. `qa/api-cases.json` 에 `kind: "unity"` 케이스(고정 시간 + `inputScript` 로 결정적 출력) 추가.
 5. REFERENCE 5-1절 지원 API 표 갱신.
 
-## 12. 버전 올리기
+## 12. 디자인 패턴 추가 (`labs/patterns`)
+
+1. `tools/data/make_patterns.py` 에 `pat(id, 분류, 이름, 영어, 언제, 핵심, 코드, 기대출력, [규칙…])` 하나 추가. 분류는 `생성`·`구조`·`행위`·`설계` 중 하나(새 분류를 쓰면 선택 상자에 새 묶음이 생김).
+2. `python3 tools/data/make_patterns.py` → `engine/wwwroot/labs/patterns/patterns.json` 갱신 (이 JSON 을 손으로 고치지 말 것).
+3. 코드는 **최상위 문장을 맨 위**에(타입 선언보다 뒤에 오면 컴파일 오류). 기대 출력은 줄마다 `\n`, 마지막 줄도 `\n`.
+4. 규칙은 패턴의 「핵심 모양」만 1~3개. 패턴을 안 쓴 버전(예: if 로 짠 것)이 **떨어지는지** 머릿속으로 확인하고, 중요한 반례는 `qa/api-cases.json` 에 `kind:"analyze"` + `rulesPassed` 로 넣는다.
+5. 데스크톱 테스트가 패턴마다 「출력 일치 + 규칙 전부 통과」를, 브라우저 QA 가 「분석 성공 + 규칙 통과 + 다이어그램 상자 겹침 없음」을 자동으로 본다.
+
+## 13. 구조 규칙 종류 추가 (TypeFilter 키 등)
+
+1. `engine/Core/RunResult.cs` 의 `TypeFilter`(또는 `StructureRule`·`RelationFilter`)에 속성 추가 — JSON 은 camelCase 로 자동.
+2. `engine/Core/Analyzer.cs` 의 `Match`(또는 `MatchRelation`·`Evaluate`)에 조건 추가.
+3. 문법 사용 횟수 종류를 늘리려면 `CountFeatures` 의 `switch` 에 문법 노드 한 줄.
+4. `qa/api-cases.json` 에 `kind:"analyze"` 케이스(맞는 코드·틀린 코드 둘 다) → REFERENCE 4-2절 표 갱신.
+
+## 14. Unity 예제 추가
+
+`engine/wwwroot/labs/unity/unity.js` 의 `EXAMPLES` 에 `{ id, label, desc, code }` (desc 는 예제 위 설명 줄). 결정적인 출력이 있으면 고정 시간 실행 결과를 `qa/api-cases.json` 에 `kind:"unity"` 로 고정(입력은 `inputScript`). 브라우저 QA 가 모든 예제를 30프레임 돌려 오류가 없는지 본다.
+
+## 15. 버전 올리기
 
 - `engine/Core/Engine.cs` `EngineVersion` 과 `engine/wwwroot/index.html` 의 `<span id="ver">` 를 **같이**.
 - 기능 추가 0.x.0, 수정·문서 0.x.y.
